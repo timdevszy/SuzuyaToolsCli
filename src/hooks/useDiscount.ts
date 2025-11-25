@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import * as discountService from '../services/discountService';
 
 export interface DiscountConfig {
   outlet: string;
   discountPercent: string; // keep as string for API compatibility
+  description?: string;
 }
 
 export interface DiscountItem {
@@ -12,11 +13,13 @@ export interface DiscountItem {
   data: any; // raw result from scanProduct, nanti bisa diketik lebih spesifik
 }
 
-export function useDiscount() {
+function useDiscountInternal() {
   const [config, setConfig] = useState<DiscountConfig | null>(null);
   const [items, setItems] = useState<DiscountItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPrinterConfigured, setIsPrinterConfigured] = useState(false);
+  const [isDiscountConfigured, setIsDiscountConfigured] = useState(false);
 
   const updateConfig = useCallback((cfg: DiscountConfig) => {
     setConfig(cfg);
@@ -61,9 +64,30 @@ export function useDiscount() {
     items,
     isLoading,
     error,
+    isPrinterConfigured,
+    isDiscountConfigured,
     updateConfig,
     clearItems,
     removeItem,
     scanAndAdd,
+    setIsPrinterConfigured,
+    setIsDiscountConfigured,
   };
+}
+
+type DiscountContextValue = ReturnType<typeof useDiscountInternal>;
+
+const DiscountContext = React.createContext<DiscountContextValue | null>(null);
+
+export function DiscountProvider({ children }: { children: React.ReactNode }) {
+  const value = useDiscountInternal();
+  return React.createElement(DiscountContext.Provider, { value }, children);
+}
+
+export function useDiscount(): DiscountContextValue {
+  const ctx = useContext(DiscountContext);
+  if (!ctx) {
+    throw new Error('useDiscount must be used within a DiscountProvider');
+  }
+  return ctx;
 }

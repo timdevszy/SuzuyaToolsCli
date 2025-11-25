@@ -47,10 +47,15 @@ export async function createDiscount(payload: CreateDiscountPayload) {
 
 export async function getOutlets() {
   const res = await toolsApiClient.get('/outlet');
-  return res.data;
+  return res.data?.results ?? res.data;
 }
 
 export async function getBrands() {
   const res = await toolsApiClient.get('/brands');
-  return res.data;
+  return res.data?.results ?? res.data;
+}
+
+export async function getJabatan() {
+  const res = await toolsApiClient.get('/jabatan');
+  return res.data?.results ?? res.data;
 }

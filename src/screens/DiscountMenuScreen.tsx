@@ -1,61 +1,85 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../ui/theme';
-import { PrinterSetupScreen } from './PrinterSetupScreen';
-import { DiscountConfigScreen } from './DiscountConfigScreen';
-import { DiscountScanScreen } from './DiscountScanScreen';
 import { Icon } from '../ui/Icon';
 
-type DiscountView = 'menu' | 'printer' | 'config' | 'scan';
-
-interface Props {
-  onClose: () => void;
+interface DiscountMenuScreenProps {
+  onOpenPrinter: () => void;
+  onOpenConfig: () => void;
+  onOpenScan: () => void;
 }
 
-export function DiscountMenuScreen({ onClose }: Props) {
-  const [view, setView] = useState<DiscountView>('menu');
-
-  if (view === 'printer') {
-    return <PrinterSetupScreen onDone={() => setView('menu')} />;
-  }
-
-  if (view === 'config') {
-    return <DiscountConfigScreen onDone={() => setView('menu')} />;
-  }
-
-  if (view === 'scan') {
-    return <DiscountScanScreen onBack={() => setView('menu')} />;
-  }
+export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: DiscountMenuScreenProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Discount</Text>
-        <Text style={styles.subtitle}>Pilih menu untuk mengelola promo dan scanning produk.</Text>
-      </View>
       <View style={styles.body}>
-        <View style={styles.menuGrid}>
-          <MenuItem
-            icon="Scan"
-            label="Scan product"
-            onPress={() => setView('scan')}
-          />
-          <MenuItem
-            icon="Config"
-            label="Setup discount"
-            onPress={() => setView('config')}
-          />
-          <MenuItem
-            icon="Printer"
-            label="Setup printer"
-            onPress={() => setView('printer')}
-          />
+        <View style={styles.emptyState}>
+          <Text style={styles.title}>Discount</Text>
+          <Text style={styles.subtitle}>
+            Pilih menu untuk mengelola promo dan scanning produk.
+          </Text>
         </View>
+
       </View>
-      <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-        <Text style={styles.closeText}>Tutup</Text>
-      </TouchableOpacity>
+
+      {menuOpen && (
+        <View style={styles.dialOverlay}>
+          {/* Tap di area kosong akan menutup menu */}
+          <TouchableWithoutFeedback onPress={() => setMenuOpen(false)}>
+            <View style={StyleSheet.absoluteFillObject} />
+          </TouchableWithoutFeedback>
+
+          <View style={styles.dialContainer}>
+            <TouchableOpacity
+              style={styles.dialItemRow}
+              activeOpacity={0.85}
+              onPress={onOpenPrinter}>
+            <View style={styles.dialLabelChip}>
+              <Text style={styles.dialLabelText}>Setup printer</Text>
+            </View>
+            <View style={styles.dialIconCircle}>
+              <Icon name="printer" size={20} color="#2563eb" />
+            </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.dialItemRow}
+              activeOpacity={0.85}
+              onPress={onOpenConfig}>
+            <View style={styles.dialLabelChip}>
+              <Text style={styles.dialLabelText}>Setup discount</Text>
+            </View>
+            <View style={styles.dialIconCircle}>
+              <Icon name="discount" size={20} color="#2563eb" />
+            </View>
+          </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.dialItemRow}
+              activeOpacity={0.85}
+              onPress={onOpenScan}>
+            <View style={styles.dialLabelChip}>
+              <Text style={styles.dialLabelText}>Scan product</Text>
+            </View>
+            <View style={styles.dialIconCircle}>
+              <Icon name="scan" size={20} color="#2563eb" />
+            </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <View style={styles.fabContainer}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.fabButton}
+          onPress={() => setMenuOpen(prev => !prev)}>
+          <Text style={styles.fabLabel}>{menuOpen ? '×' : '+'}</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -80,11 +104,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
   title: {
     fontSize: 22,
     fontWeight: '600',
@@ -94,40 +113,101 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 4,
+    textAlign: 'center',
   },
   body: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
+    justifyContent: 'center',
   },
-  info: {
-    fontSize: 14,
-    color: colors.textSecondary,
+  emptyState: {
+    alignItems: 'center',
+    marginTop: 0,
+    paddingHorizontal: 16,
   },
-  closeButton: {
+  dialOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+  },
+  dialContainer: {
     position: 'absolute',
-    left: 16,
-    bottom: 24,
+    right: 5,
+    bottom: 80,
+    alignItems: 'flex-end',
   },
-  closeText: {
-    fontSize: 14,
-    color: '#2563eb',
-  },
-  menuGrid: {
+  dialItemRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: 12,
   },
+  dialLabelChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  dialLabelText: {
+    fontSize: 12,
+    color: colors.textPrimary,
+  },
+  dialIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialIconText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  // Style cadangan untuk MenuItem grid (saat ini tidak digunakan di speed-dial,
+  // tapi tetap disediakan karena komponen MenuItem mereferensikan style ini).
   menuItem: {
-    width: '25%',
-    paddingVertical: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuItemLabel: {
-    marginTop: 6,
+    marginTop: 4,
     fontSize: 12,
     textAlign: 'center',
     color: colors.textPrimary,
+  },
+  fabContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 10,
+  },
+  fabButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  fabLabel: {
+    fontSize: 28,
+    color: '#ffffff',
+    marginTop: -2,
   },
 });

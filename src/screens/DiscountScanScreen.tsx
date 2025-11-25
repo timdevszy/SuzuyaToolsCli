@@ -8,8 +8,10 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useDiscount } from '../hooks/useDiscount';
+import { Icon } from '../ui/Icon';
 
 interface Props {
   onBack?: () => void;
@@ -19,6 +21,7 @@ export function DiscountScanScreen({ onBack }: Props) {
   const { config, items, isLoading, error, scanAndAdd, removeItem, clearItems } =
     useDiscount();
   const [code, setCode] = useState('');
+  const [cameraVisible, setCameraVisible] = useState(false);
 
   const handleScan = async () => {
     if (!code) {
@@ -34,47 +37,72 @@ export function DiscountScanScreen({ onBack }: Props) {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Scan Product Discount</Text>
-      {config ? (
-        <Text style={styles.subtitle}>
-          Outlet {config.outlet} · Diskon {config.discountPercent}%
-        </Text>
-      ) : (
-        <Text style={styles.subtitle}>Config discount belum di-set</Text>
-      )}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <View style={styles.row}>
-        <TextInput
-          style={[styles.input, { flex: 1 }]}
-          placeholder="Kode / barcode"
-          value={code}
-          onChangeText={setCode}
-        />
-        <Button title="Scan" onPress={handleScan} />
-      </View>
-      {isLoading && <ActivityIndicator style={{ marginVertical: 8 }} />}
-      <FlatList
-        data={items}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{item.code}</Text>
-            <Text style={styles.cardText}>
-              {JSON.stringify(item.data)}
-            </Text>
-            <TouchableOpacity
-              onPress={() => removeItem(item.id)}
-              style={styles.removeButton}>
-              <Text style={styles.removeButtonText}>Hapus</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.centerBlock}>
+        {config ? (
+          <Text style={styles.subtitle}>
+            Outlet {config.outlet} · Diskon {config.discountPercent}%
+          </Text>
+        ) : (
+          <Text style={styles.subtitle}>Config discount belum di-set</Text>
         )}
-      />
-      <View style={styles.footerRow}>
-        <Button title="Clear" onPress={clearItems} />
-        {onBack && <Button title="Kembali" onPress={onBack} />}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.8}
+            onPress={() => setCameraVisible(true)}>
+            <Icon name="camera" size={22} color="#2563eb" />
+          </TouchableOpacity>
+          <TextInput
+            style={[styles.input, styles.codeInput]}
+            placeholder="Kode barcode / kode internal"
+            value={code}
+            onChangeText={setCode}
+          />
+          <TouchableOpacity
+            style={[styles.iconButton, styles.searchButton]}
+            activeOpacity={0.8}
+            onPress={handleScan}>
+            <Icon name="search" size={20} color="#2563eb" />
+          </TouchableOpacity>
+        </View>
+        {isLoading && <ActivityIndicator style={{ marginVertical: 8 }} />}
       </View>
+
+      {items.length > 0 && (
+        <FlatList
+          data={items}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{item.code}</Text>
+              <Text style={styles.cardText}>
+                {JSON.stringify(item.data)}
+              </Text>
+              <TouchableOpacity
+                onPress={() => removeItem(item.id)}
+                style={styles.removeButton}>
+                <Text style={styles.removeButtonText}>Hapus</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      )}
+
+      <Modal visible={cameraVisible} animationType="slide" onRequestClose={() => setCameraVisible(false)}>
+        <View style={styles.cameraModalRoot}>
+          <View style={styles.cameraPreview}>
+            <Text style={styles.cameraText}>[ Area Kamera untuk Scan Barcode ]</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.cameraCloseButton}
+            activeOpacity={0.8}
+            onPress={() => setCameraVisible(false)}>
+            <Text style={styles.cameraCloseText}>Tutup</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -83,20 +111,17 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#020617',
+    backgroundColor: '#ffffff',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-    color: '#e5e7eb',
+  centerBlock: {
+    flex: 1,
+    justifyContent: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
     marginBottom: 12,
-    color: '#9ca3af',
+    color: '#6b7280',
   },
   error: {
     color: 'red',
@@ -115,6 +140,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginRight: 8,
+  },
+  codeInput: {
+    flex: 1,
+    marginRight: 8,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    backgroundColor: '#ffffff',
+  },
+  searchButton: {
+    backgroundColor: '#ffffff',
+    borderColor: '#2563eb',
+  },
+  cameraModalRoot: {
+    flex: 1,
+    backgroundColor: '#000000',
+    padding: 16,
+    justifyContent: 'center',
+  },
+  cameraPreview: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraText: {
+    color: '#e5e7eb',
+    fontSize: 16,
+  },
+  cameraCloseButton: {
+    marginTop: 16,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#2563eb',
+  },
+  cameraCloseText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   list: {
     paddingVertical: 8,
