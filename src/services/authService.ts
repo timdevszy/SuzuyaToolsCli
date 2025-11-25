@@ -1,5 +1,5 @@
 import { apiClient } from '../api/apiClient';
-import { getOrCreateDeviceId } from './deviceService';
+import { getOrCreateDeviceIdForUsername } from './deviceService';
 
 export interface LoginPayload {
   username: string;
@@ -7,6 +7,7 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
+  name: string;
   username: string;
   password: string;
   password_confirmation: string;
@@ -42,7 +43,7 @@ export interface LoginResponseDto {
 }
 
 export async function login(payload: LoginPayload): Promise<LoginResultUser> {
-  const device_id = await getOrCreateDeviceId();
+  const device_id = await getOrCreateDeviceIdForUsername(payload.username);
 
   const res = await apiClient.post<LoginResponseDto>('/login/ssa', {
     username: payload.username,
@@ -61,26 +62,81 @@ export async function login(payload: LoginPayload): Promise<LoginResultUser> {
 }
 
 export async function register(payload: RegisterPayload): Promise<LoginResultUser> {
-  const device_id = await getOrCreateDeviceId();
+  const device_id = await getOrCreateDeviceIdForUsername(payload.username);
 
-  const res = await apiClient.post<LoginResponseDto>('/register/ssa', {
+  const isSuplier = payload.jabatan
+    ? payload.jabatan.toLowerCase() === 'suplier'.toLowerCase()
+    : false;
+
+  const brandsToSend = isSuplier
+    ? (payload.brands && payload.brands.length > 0 ? payload.brands : [])
+    : ['-'];
+
+  const firstOutlet =
+    (payload.outlet_choice && payload.outlet_choice[0]) ||
+    ({ value: '-', name: '-' } as { value: string; name: string });
+
+  const body = {
+    name: payload.name,
     username: payload.username,
     password: payload.password,
     password_confirmation: payload.password_confirmation,
     jabatan: payload.jabatan,
     divisi: payload.divisi,
-    // Ikuti format API yang kamu berikan: kirim sebagai array biasa
-    brands: payload.brands ?? [],
-    outlet_choice: payload.outlet_choice ?? [],
+    // Suplier: kirim brand pilihan user. Non-suplier: kirim placeholder '-'.
+    // Backend melakukan json_decode di sisi server, jadi kirim sebagai string JSON untuk compatibility.
+    brands: JSON.stringify(brandsToSend),
+    outlet_choice: JSON.stringify(payload.outlet_choice ?? []),
+    default_outlet: firstOutlet.value,
     device_id,
-  });
+  };
 
-  const data = res.data;
+  // eslint-disable-next-line no-console
+  console.log('authService.register request body', body);
 
-  if (!data.success || !data.results || data.results.length === 0) {
-    const msg = data.message || data.msg || 'Register gagal';
-    throw new Error(msg);
+  try {
+    const res = await apiClient.post<LoginResponseDto>('/register/ssa', body);
+
+    // eslint-disable-next-line no-console
+    console.log('authService.register raw response', res.status, res.data);
+
+    const data = res.data;
+
+    const rawMsg = data.message || data.msg || '';
+    const lowerMsg = typeof rawMsg === 'string' ? rawMsg.toLowerCase() : '';
+
+    // Jika backend menyatakan account already exist, perlakukan sebagai error
+    if (lowerMsg.includes('account already exist')) {
+      throw new Error(rawMsg || 'Account already exist');
+    }
+
+    if (!data.success) {
+      const msg = rawMsg || 'Register gagal';
+      throw new Error(msg);
+    }
+
+    if (data.results && data.results.length > 0) {
+      return data.results[0];
+    }
+
+    const syntheticUser: LoginResultUser = {
+      uuid: '',
+      name: payload.name || payload.username,
+      username: payload.username,
+      token: '',
+      jabatan: payload.jabatan,
+      divisi: payload.divisi,
+      brand: Array.isArray(brandsToSend) ? brandsToSend.join(',') : String(brandsToSend),
+      device_id,
+      default_outlet: firstOutlet.value,
+      status: 0,
+      login_status: 0,
+    };
+
+    return syntheticUser;
+  } catch (e: any) {
+    // eslint-disable-next-line no-console
+    console.log('authService.register error', e?.response?.status, e?.response?.data || e);
+    throw e;
   }
-
-  return data.results[0];
 }

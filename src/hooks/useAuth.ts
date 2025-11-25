@@ -61,16 +61,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       try {
         const u = await authService.register(payload);
-        setUser(u);
-        await authStorage.saveSession(u);
+        // Tidak auto-login setelah register; cukup kembalikan hasilnya.
         return u;
       } catch (e: any) {
         const backend = e?.response?.data;
         // eslint-disable-next-line no-console
         console.log('Register error', backend || e);
-        const msg =
+        const rawMsg =
           backend?.message || backend?.msg || e?.message || 'Register gagal';
-        setError(msg);
+
+        let msg = rawMsg;
+        if (typeof rawMsg === 'string') {
+          const lower = rawMsg.toLowerCase();
+          if (lower.includes('account already exist')) {
+            msg =
+              'Perangkat ini sudah memiliki akun terdaftar. Silakan login dengan akun tersebut.';
+          }
+        }
+
+        setError(msg as string);
         throw e;
       } finally {
         setIsLoading(false);

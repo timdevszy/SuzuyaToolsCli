@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import {
+  View,
   Text,
   TextInput,
   Image,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  SafeAreaView,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { Screen } from '../ui/Screen';
@@ -14,9 +20,10 @@ import { colors } from '../ui/theme';
 
 interface Props {
   onLoginSuccess?: () => void;
+  onNavigateRegister?: () => void;
 }
 
-export function LoginScreen({ onLoginSuccess }: Props) {
+export function LoginScreen({ onLoginSuccess, onNavigateRegister }: Props) {
   const { login, isLoading, error } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -33,47 +40,60 @@ export function LoginScreen({ onLoginSuccess }: Props) {
   };
 
   return (
-    <Screen>
-      <Card>
-        <Image
-          source={require('../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.appName}>Suzuya Tools</Text>
-        <Text style={styles.title}>Masuk</Text>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Text style={styles.inputLabel}>Username</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          autoCapitalize="none"
-          value={username}
-          onChangeText={setUsername}
-        />
-        <Text style={styles.inputLabel}>Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-        {isLoading ? (
-          <ActivityIndicator style={styles.loading} />
-        ) : (
-          <TouchableOpacity
-            style={styles.button}
-            activeOpacity={0.8}
-            onPress={handleLogin}>
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.registerInfo}>
-          Pembuatan akun baru sementara melalui admin / tim IT.
-        </Text>
-      </Card>
-    </Screen>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <Screen>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+            <Card>
+            <Image
+              source={require('../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.appName}>Suzuya Tools</Text>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Text style={styles.inputLabel}>Username</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              autoCapitalize="none"
+              value={username}
+              onChangeText={setUsername}
+            />
+            <Text style={styles.inputLabel}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+            {isLoading ? (
+              <ActivityIndicator style={styles.loading} />
+            ) : (
+              <TouchableOpacity
+                style={styles.button}
+                activeOpacity={0.8}
+                onPress={handleLogin}>
+                <Text style={styles.buttonText}>Login</Text>
+              </TouchableOpacity>
+            )}
+            <View style={styles.registerRow}>
+              <Text style={styles.registerInfo}>Belum punya akun?</Text>
+              <Text style={styles.registerLink} onPress={onNavigateRegister}>
+                {' '}Register
+              </Text>
+            </View>
+          </Card>
+        </ScrollView>
+      </Screen>
+    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -144,5 +164,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  registerLink: {
+    fontSize: 12,
+    color: '#2196f3',
+    fontWeight: '600',
   },
 });
