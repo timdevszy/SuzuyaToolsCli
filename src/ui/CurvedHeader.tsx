@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from './theme';
+import { Icon } from './Icon';
 
 const { width } = Dimensions.get('window');
 
@@ -9,9 +10,10 @@ interface CurvedHeaderProps {
   title: string;
   name?: string;
   subtitle?: string;
+  outletCode?: string;
 }
 
-export function CurvedHeader({ title, name, subtitle }: CurvedHeaderProps) {
+export function CurvedHeader({ title, name, subtitle, outletCode }: CurvedHeaderProps) {
   const height = 160;
 
   return (
@@ -32,14 +34,30 @@ export function CurvedHeader({ title, name, subtitle }: CurvedHeaderProps) {
         <View style={styles.avatarRow}>
           {name ? (
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {name.charAt(0).toUpperCase()}
-              </Text>
+              <Icon name="profile" size={22} color="#0ea5e9" />
             </View>
           ) : null}
           <View style={styles.textContainer}>
             {name ? <Text style={styles.name}>{name}</Text> : null}
-            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+            {(subtitle || outletCode) && (
+              <View style={styles.subtitleRow}>
+                {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+                {outletCode ? (
+                  <View style={styles.outletBadge}>
+                    <View
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: '#22c55e',
+                        marginRight: 6,
+                      }}
+                    />
+                    <Text style={styles.outletBadgeText}>{outletCode}</Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -76,6 +94,11 @@ const styles = StyleSheet.create({
   textContainer: {
     flexShrink: 1,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   name: {
     fontSize: 20,
     fontWeight: '600',
@@ -84,5 +107,21 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#e0f2fe',
+    marginRight: 6,
+  },
+  outletBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(226, 232, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 255, 0.45)',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  outletBadgeText: {
+    fontSize: 11,
+    color: '#e0f2fe',
+    fontWeight: '500',
   },
 });

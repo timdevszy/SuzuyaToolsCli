@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, LayoutChangeEvent } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { colors } from './theme';
 import { Icon } from './Icon';
 
@@ -23,8 +24,27 @@ export function BottomNavBar({ items, activeKey, onPress }: BottomNavBarProps) {
     return null;
   }
 
+  const [width, setWidth] = useState(0);
+
+  const handleLayout = (e: LayoutChangeEvent) => {
+    setWidth(e.nativeEvent.layout.width);
+  };
+
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} onLayout={handleLayout}>
+      {width > 0 ? (
+        <Svg
+          pointerEvents="none"
+          width={width}
+          height={64}
+          style={styles.svgBackground}>
+          <Path
+            d={createNotchedPath(width)}
+            fill={colors.surface}
+          />
+        </Svg>
+      ) : null}
+
       <View style={styles.bar}>
         {items.map(item => {
           const isActive = item.key === activeKey;
@@ -33,18 +53,19 @@ export function BottomNavBar({ items, activeKey, onPress }: BottomNavBarProps) {
               key={item.key}
               style={styles.item}
               onPress={() => onPress(item.key)}>
-              <View style={[styles.indicator, isActive && styles.indicatorActive]} />
-              <Icon
-                name={item.icon}
-                size={24}
-                color={isActive ? '#2563eb' : colors.textSecondary}
-              />
-              {item.label ? (
-                <View style={{ height: 4 }} />
-              ) : null}
-              {item.label ? (
-                <IconLabel text={item.label} active={isActive} />
-              ) : null}
+              <View style={isActive ? styles.tabActive : styles.tab}>
+                <Icon
+                  name={item.icon}
+                  size={22}
+                  color={isActive ? '#2563eb' : colors.textSecondary}
+                />
+                {item.label ? (
+                  <Text
+                    style={isActive ? styles.labelActive : styles.labelDefault}>
+                    {item.label}
+                  </Text>
+                ) : null}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -56,37 +77,53 @@ export function BottomNavBar({ items, activeKey, onPress }: BottomNavBarProps) {
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: colors.background,
-    paddingBottom: 8,
+    paddingBottom: 0,
+  },
+  svgBackground: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
   },
   bar: {
-    marginHorizontal: 0,
     height: 64,
+    paddingTop: 4,
+    paddingBottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: -2 },
-    elevation: 2,
   },
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  indicator: {
-    height: 2,
-    width: 24,
-    borderRadius: 999,
-    backgroundColor: 'transparent',
-    marginBottom: 6,
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  indicatorActive: {
-    backgroundColor: '#2563eb',
+  tabActive: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelDefault: {
+    marginTop: 2,
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  labelActive: {
+    marginTop: 2,
+    fontSize: 11,
+    color: '#2563eb',
+    fontWeight: '600',
   },
 });
 
@@ -108,4 +145,27 @@ function IconLabel({ text, active }: IconLabelProps) {
       </Text>
     </View>
   );
+}
+
+function createNotchedPath(width: number): string {
+  const height = 64;
+  const notchWidth = 80;
+  const notchDepth = 12;
+
+  const center = width / 2;
+  const notchLeft = center - notchWidth / 2;
+  const notchRight = center + notchWidth / 2;
+
+  // Path dimulai dari kiri atas, lalu membuat lekukan kecil ke atas di tengah,
+  // kemudian ke kanan atas dan menutup ke bawah.
+  return [
+    `M0 0`,
+    `H${notchLeft}`,
+    // Lekukan naik ke atas (y negatif) lalu kembali ke garis 0
+    `Q${center} ${-notchDepth} ${notchRight} 0`,
+    `H${width}`,
+    `V${height}`,
+    `H0`,
+    `Z`,
+  ].join(' ');
 }
