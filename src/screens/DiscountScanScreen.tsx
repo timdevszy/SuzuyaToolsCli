@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  Button,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Modal,
+  Alert,
 } from 'react-native';
 import { useDiscount } from '../hooks/useDiscount';
 import { Icon } from '../ui/Icon';
@@ -18,8 +18,15 @@ interface Props {
 }
 
 export function DiscountScanScreen({ onBack }: Props) {
-  const { config, items, isLoading, error, scanAndAdd, removeItem, clearItems } =
-    useDiscount();
+  const {
+    config,
+    items,
+    isLoading,
+    error,
+    scanAndAdd,
+    removeItem,
+    clearItems,
+  } = useDiscount();
   const [code, setCode] = useState('');
   const [cameraVisible, setCameraVisible] = useState(false);
 
@@ -27,10 +34,32 @@ export function DiscountScanScreen({ onBack }: Props) {
     if (!code) {
       return;
     }
+    console.log('[Discount] Scan product requested (manual input)', { code });
     try {
       await scanAndAdd(code);
+      console.log('[Discount] Scan product success (manual input)', { code });
       setCode('');
-    } catch {
+
+      Alert.alert(
+        'Berhasil',
+        'Produk berhasil ditambahkan ke daftar discount.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (onBack) {
+                onBack();
+              }
+            },
+          },
+        ],
+        { cancelable: false },
+      );
+    } catch (e) {
+      console.log('[Discount] Scan product failed (manual input)', {
+        code,
+        error: e,
+      });
       // error sudah di-set di hook
     }
   };
@@ -50,8 +79,11 @@ export function DiscountScanScreen({ onBack }: Props) {
           <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.8}
-            onPress={() => setCameraVisible(true)}>
-            <Icon name="camera" size={22} color="#2563eb" />
+            onPress={() => {
+              console.log('[Discount] Open camera modal for scan');
+              setCameraVisible(true);
+            }}>
+            <Icon name="qr" size={22} color="#2563eb" />
           </TouchableOpacity>
           <TextInput
             style={[styles.input, styles.codeInput]}
@@ -77,11 +109,15 @@ export function DiscountScanScreen({ onBack }: Props) {
           renderItem={({ item }) => (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>{item.code}</Text>
-              <Text style={styles.cardText}>
-                {JSON.stringify(item.data)}
-              </Text>
               <TouchableOpacity
-                onPress={() => removeItem(item.id)}
+                onPress={() => {
+                  console.log('[Discount] Remove scanned item', {
+                    id: item.id,
+                    code: item.code,
+                    data: item.data,
+                  });
+                  removeItem(item.id);
+                }}
                 style={styles.removeButton}>
                 <Text style={styles.removeButtonText}>Hapus</Text>
               </TouchableOpacity>
@@ -90,7 +126,13 @@ export function DiscountScanScreen({ onBack }: Props) {
         />
       )}
 
-      <Modal visible={cameraVisible} animationType="slide" onRequestClose={() => setCameraVisible(false)}>
+      <Modal
+        visible={cameraVisible}
+        animationType="slide"
+        onRequestClose={() => {
+          console.log('[Discount] Close camera modal (back press)');
+          setCameraVisible(false);
+        }}>
         <View style={styles.cameraModalRoot}>
           <View style={styles.cameraPreview}>
             <Text style={styles.cameraText}>[ Area Kamera untuk Scan Barcode ]</Text>
@@ -98,7 +140,10 @@ export function DiscountScanScreen({ onBack }: Props) {
           <TouchableOpacity
             style={styles.cameraCloseButton}
             activeOpacity={0.8}
-            onPress={() => setCameraVisible(false)}>
+            onPress={() => {
+              console.log('[Discount] Close camera modal (button)');
+              setCameraVisible(false);
+            }}>
             <Text style={styles.cameraCloseText}>Tutup</Text>
           </TouchableOpacity>
         </View>
@@ -218,10 +263,5 @@ const styles = StyleSheet.create({
   },
   removeButtonText: {
     color: 'red',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
   },
 });

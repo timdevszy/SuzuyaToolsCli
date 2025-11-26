@@ -159,7 +159,7 @@ export function HomeScreen() {
                 <DiscountConfigScreen onDone={() => setView('discount')} />
               )}
 
-              {view === 'scan' && <DiscountScanScreen onBack={() => setView('home')} />}
+              {view === 'scan' && <DiscountScanScreen onBack={() => setView('discount')} />}
             </DiscountProvider>
 
             {view === 'profile' && (
@@ -268,6 +268,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
     borderWidth: 0,
+    paddingTop: 0,
   },
   scanModalBackdrop: {
     flex: 1,

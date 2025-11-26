@@ -107,6 +107,57 @@ export function Icon({ name, size = 20, color = '#000' }: IconProps) {
     );
   }
 
+  if (name === 'qr') {
+    return (
+      <View style={circleStyle}>
+        <View
+          style={{
+            width: dimension * 0.6,
+            height: dimension * 0.6,
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+          }}>
+          <View
+            style={{
+              width: '50%',
+              height: '50%',
+              borderWidth: 2,
+              borderColor: '#ffffff',
+            }}
+          />
+          <View
+            style={{
+              width: '50%',
+              height: '50%',
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              borderLeftWidth: 0,
+            }}
+          />
+          <View
+            style={{
+              width: '50%',
+              height: '50%',
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              borderTopWidth: 0,
+            }}
+          />
+          <View
+            style={{
+              width: '50%',
+              height: '50%',
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              borderLeftWidth: 0,
+              borderTopWidth: 0,
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
+
   if (name === 'price') {
     return (
       <View style={circleStyle}>

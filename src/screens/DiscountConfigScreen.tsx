@@ -19,6 +19,7 @@ export function DiscountConfigScreen({ onDone }: Props) {
       Alert.alert('Keterangan wajib diisi', 'Silakan isi keterangan untuk setup discount.');
       return;
     }
+    console.log('[Discount] Saving config', { outlet, discountPercent, description });
     updateConfig({
       outlet,
       discountPercent,

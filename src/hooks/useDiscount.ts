@@ -47,7 +47,7 @@ function useDiscountInternal() {
           discount: config.discountPercent,
         });
         const id = `${code}-${Date.now()}`;
-        setItems(prev => [...prev, { id, code, data: result }]);
+        setItems(prev => [{ id, code, data: result }, ...prev]);
       } catch (e: any) {
         const msg = e?.response?.data?.message || e?.message || 'Gagal scan produk';
         setError(msg);

@@ -19,6 +19,13 @@ export async function scanProduct(
   return res.data;
 }
 
+export async function getProductByInternal(outlet: string, internal: string) {
+  const res = await toolsApiClient.get(
+    `/productinfo/${outlet}/${internal}/'0'`,
+  );
+  return res.data;
+}
+
 export interface CreateDiscountPayload {
   internal: string;
   name_product: string;
