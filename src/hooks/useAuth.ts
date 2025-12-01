@@ -67,10 +67,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const backend = e?.response?.data;
         // eslint-disable-next-line no-console
         console.log('Register error', backend || e);
-        const rawMsg =
-          backend?.message || backend?.msg || e?.message || 'Register gagal';
+        let rawMsg: unknown =
+          backend?.message || backend?.msg || e?.message || backend || 'Register gagal';
 
-        let msg = rawMsg;
+        // Jika backend adalah object validasi field (misalnya { password: ['The password must be at least 8 characters.'] })
+        if (!backend?.message && !backend?.msg && backend && typeof backend === 'object') {
+          const firstKey = Object.keys(backend)[0];
+          const value = (backend as any)[firstKey];
+          if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+            rawMsg = value[0];
+          }
+        }
+
+        let msg = rawMsg as string;
         if (typeof rawMsg === 'string') {
           const lower = rawMsg.toLowerCase();
           if (lower.includes('account already exist')) {
