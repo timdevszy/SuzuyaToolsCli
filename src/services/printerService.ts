@@ -46,6 +46,32 @@ export interface PreparedDiscountPrintJob {
 }
 
 /**
+ * Encoder ESC/POS sederhana untuk satu label diskon.
+ * Saat ini masih fokus ke teks, belum menggambar barcode fisik.
+ */
+export function encodeDiscountJobToEscPos(job: PreparedDiscountPrintJob): Uint8Array {
+  const lines: string[] = [];
+
+  const { label } = job;
+
+  lines.push(label.productName);
+  lines.push(`Kode: ${label.internalCode}`);
+  lines.push(`Barcode: ${label.barcode}`);
+  lines.push('');
+  lines.push(`Harga Normal: Rp ${label.normalPrice.toLocaleString('id-ID')}`);
+  lines.push(`Harga Diskon: Rp ${label.discountPrice.toLocaleString('id-ID')}`);
+
+  const joined = lines.join('\n');
+  const bytes: number[] = [];
+
+  for (let i = 0; i < joined.length; i += 1) {
+    bytes.push(joined.charCodeAt(i));
+  }
+
+  return Uint8Array.from(bytes);
+}
+
+/**
  * Siapkan data yang siap dikirim ke printer untuk satu label diskon.
  *
  * Tahap selanjutnya (yang bisa kamu hubungkan sendiri dengan lib ESC/POS) adalah
@@ -81,17 +107,13 @@ export async function printDiscountLabel(
   settings: PrinterSettings = defaultPrinterSettings,
 ): Promise<void> {
   const job = prepareDiscountPrintJob(label, settings);
+  const bytes = encodeDiscountJobToEscPos(job);
 
   console.log('[Printer] Prepared discount label job', {
     settings: job.settings,
     label: job.label,
     codes: job.barcodeEncoding.codes,
     patterns: job.barcodeEncoding.patterns,
+    escposLength: bytes.length,
   });
-
-  // TODO: Integrasi dengan library ESC/POS / Bluetooth yang kamu pakai.
-  // Di titik ini kamu bisa implementasi garis coret harga normal:
-  // - print teks harga normal
-  // - gambar garis horizontal di posisi (baselineY + strikeOffsetY)
-  // berdasarkan setting.job.settings.strikeThroughPrice & strikeOffsetY.
 }

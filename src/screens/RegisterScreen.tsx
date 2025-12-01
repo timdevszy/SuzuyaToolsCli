@@ -13,8 +13,8 @@ import {
   Platform,
   StatusBar,
   TouchableWithoutFeedback,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import type { RegisterPayload } from '../services/authService';
 import { Screen } from '../ui/Screen';

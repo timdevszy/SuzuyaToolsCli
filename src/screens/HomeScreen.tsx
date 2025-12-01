@@ -152,7 +152,7 @@ export function HomeScreen() {
               )}
 
               {view === 'printer' && (
-                <PrinterSetupScreen onDone={() => setView('home')} />
+                <PrinterSetupScreen onDone={() => setView('discount')} />
               )}
 
               {view === 'config' && (

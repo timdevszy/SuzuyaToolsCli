@@ -11,8 +11,8 @@ import {
   Platform,
   ScrollView,
   StatusBar,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { Screen } from '../ui/Screen';
 import { Card } from '../ui/Card';
