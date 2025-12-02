@@ -43,12 +43,13 @@ export function LoginScreen({ onLoginSuccess, onNavigateRegister }: Props) {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <Screen>
           <ScrollView
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 24 }}>
             <Card>
             <Image
               source={require('../assets/logo.png')}
@@ -84,9 +85,11 @@ export function LoginScreen({ onLoginSuccess, onNavigateRegister }: Props) {
               </TouchableOpacity>
             )}
             <View style={styles.registerRow}>
-              <Text style={styles.registerInfo}>Belum punya akun?</Text>
-              <Text style={styles.registerLink} onPress={onNavigateRegister}>
-                {' '}Register
+              <Text style={styles.registerInfo}>
+                Belum punya akun?
+                <Text style={styles.registerLink} onPress={onNavigateRegister}>
+                  {' '}Register
+                </Text>
               </Text>
             </View>
           </Card>

@@ -28,7 +28,7 @@ interface Props {
 }
 
 export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
-  const { register, isLoading, error } = useAuth();
+  const { register, isLoading, error, clearError } = useAuth();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -55,6 +55,10 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
   const isUsernameTakenError =
     typeof error === 'string' && error.toLowerCase().includes('username');
   const friendlyError = error;
+
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleRegister = async () => {
     const payload: RegisterPayload = {
@@ -186,268 +190,290 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <Screen>
-        <Card>
-          <Text style={styles.title}>Register</Text>
-          {friendlyError ? <Text style={styles.error}>{friendlyError}</Text> : null}
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.formContent}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nama lengkap"
-            value={name}
-            onChangeText={setName}
-          />
+            <Card>
+              <Text style={styles.title}>Register</Text>
+              {friendlyError ? <Text style={styles.error}>{friendlyError}</Text> : null}
+              <Text style={styles.label}>Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nama lengkap"
+                value={name}
+                onChangeText={setName}
+              />
 
-          <Text style={styles.label}>Username</Text>
-          <TextInput
-            style={[
-              styles.input,
-              isUsernameTakenError && styles.inputError,
-            ]}
-            placeholder="Username"
-            autoCapitalize="none"
-            value={username}
-            onChangeText={setUsername}
-          />
+              <Text style={styles.label}>Username</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  isUsernameTakenError && styles.inputError,
+                ]}
+                placeholder="Username"
+                autoCapitalize="none"
+                value={username}
+                onChangeText={setUsername}
+              />
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
 
-          <Text style={styles.label}>Konfirmasi Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Konfirmasi Password"
-            secureTextEntry
-            value={passwordConfirmation}
-            onChangeText={setPasswordConfirmation}
-          />
+              <Text style={styles.label}>Konfirmasi Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Konfirmasi Password"
+                secureTextEntry
+                value={passwordConfirmation}
+                onChangeText={setPasswordConfirmation}
+              />
 
-          <Text style={styles.label}>Jabatan</Text>
-          <TouchableOpacity
-            style={styles.selectField}
-            activeOpacity={0.8}
-            onPress={() => openPicker('jabatan')}>
-            <Text style={jabatan ? styles.selectValue : styles.selectPlaceholder}>
-              {jabatan || 'Pilih jabatan'}
-            </Text>
-            <Text style={styles.selectChevron}>{metaLoading ? '…' : '⌵'}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Divisi</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Divisi"
-            value={divisi}
-            onChangeText={setDivisi}
-          />
-
-          <Text style={styles.label}>Outlet</Text>
-          <TouchableOpacity
-            style={styles.selectField}
-            activeOpacity={0.8}
-            onPress={() => openPicker('outlet')}>
-            <Text
-              style={
-                selectedOutlet ? styles.selectValue : styles.selectPlaceholder
-              }>
-              {selectedOutlet ? selectedOutlet.name : 'Pilih outlet'}
-            </Text>
-            <Text style={styles.selectChevron}>{metaLoading ? '…' : '⌵'}</Text>
-          </TouchableOpacity>
-
-          {jabatan.toLowerCase() === 'suplier'.toLowerCase() ? (
-            <>
-              <Text style={styles.label}>Brand</Text>
+              <Text style={styles.label}>Jabatan</Text>
               <TouchableOpacity
                 style={styles.selectField}
                 activeOpacity={0.8}
-                onPress={() => openPicker('brand')}>
-                <Text
-                  style={
-                    selectedBrands.length
-                      ? styles.selectValue
-                      : styles.selectPlaceholder
-                  }>
-                  {selectedBrands.length
-                    ? selectedBrands.join(', ')
-                    : 'Pilih brand'}
+                onPress={() => openPicker('jabatan')}>
+                <Text style={jabatan ? styles.selectValue : styles.selectPlaceholder}>
+                  {jabatan || 'Pilih jabatan'}
                 </Text>
                 <Text style={styles.selectChevron}>{metaLoading ? '…' : '⌵'}</Text>
               </TouchableOpacity>
-            </>
-          ) : null}
 
-          {metaError ? (
-            <Text style={styles.metaError}>{metaError}</Text>
-          ) : null}
+              <Text style={styles.label}>Divisi</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Divisi"
+                value={divisi}
+                onChangeText={setDivisi}
+              />
 
-          {isLoading ? (
-            <ActivityIndicator style={styles.loading} />
-          ) : (
-            <TouchableOpacity
-              style={styles.button}
-              activeOpacity={0.8}
-              onPress={handleRegister}>
-              <Text style={styles.buttonText}>Register</Text>
-            </TouchableOpacity>
-          )}
+              <Text style={styles.label}>Outlet</Text>
+              <TouchableOpacity
+                style={styles.selectField}
+                activeOpacity={0.8}
+                onPress={() => openPicker('outlet')}>
+                <Text
+                  style={
+                    selectedOutlet ? styles.selectValue : styles.selectPlaceholder
+                  }>
+                  {selectedOutlet ? selectedOutlet.name : 'Pilih outlet'}
+                </Text>
+                <Text style={styles.selectChevron}>{metaLoading ? '…' : '⌵'}</Text>
+              </TouchableOpacity>
 
-          <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Sudah punya akun?</Text>
-            <Text style={styles.registerLink} onPress={onNavigateLogin}>
-              {' '}Login
-            </Text>
-          </View>
-          </ScrollView>
-        </Card>
+              {jabatan.toLowerCase() === 'suplier'.toLowerCase() ? (
+                <>
+                  <Text style={styles.label}>Brand</Text>
+                  <TouchableOpacity
+                    style={styles.selectField}
+                    activeOpacity={0.8}
+                    onPress={() => openPicker('brand')}>
+                    <Text
+                      style={
+                        selectedBrands.length
+                          ? styles.selectValue
+                          : styles.selectPlaceholder
+                      }>
+                      {selectedBrands.length
+                        ? selectedBrands.join(', ')
+                        : 'Pilih brand'}
+                    </Text>
+                    <Text style={styles.selectChevron}>{metaLoading ? '…' : '⌵'}</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
 
-        <Modal
-          visible={pickerType !== null}
-          transparent
-          animationType="fade"
-          onRequestClose={closePicker}>
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <TouchableWithoutFeedback onPress={closePicker}>
-              <View style={styles.modalBackdrop}>
-                <TouchableWithoutFeedback>
-                  <View style={styles.modalContainer}>
-                    <View style={styles.modalHeaderRow}>
-                      <Text style={styles.modalTitle}>
-                        {pickerType === 'jabatan'
-                          ? 'Pilih Jabatan'
-                          : pickerType === 'outlet'
-                          ? 'Pilih Outlet'
-                          : 'Pilih Brand'}
-                      </Text>
-                      {hasPickerSelection && (
-                        <TouchableOpacity
-                          style={styles.modalPrimaryButtonSmall}
-                          activeOpacity={0.8}
-                          onPress={closePicker}>
-                          <Text style={styles.modalPrimaryButtonText}>Simpan</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholder="Cari..."
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                    />
-                    <ScrollView keyboardShouldPersistTaps="handled">
-                      {pickerType === 'jabatan'
-                        ? jabatanOptions
-                            .filter(option =>
-                              option
-                                .toLowerCase()
-                                .includes(searchQuery.toLowerCase()),
-                            )
-                            .slice(0, 80)
-                            .map(option => {
-                              const active = jabatan === option;
-                              return (
-                                <TouchableOpacity
-                                  key={option}
-                                  style={styles.modalItem}
-                                  onPress={() => {
-                                    setJabatan(option);
-                                  }}>
-                                  <Text
-                                    style={
-                                      active
-                                        ? styles.modalItemTextActive
-                                        : styles.modalItemText
-                                    }>
-                                    {option}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })
-                        : pickerType === 'outlet'
-                        ? outletOptions
-                            .filter(option => {
-                              const term = searchQuery.toLowerCase();
-                              return (
-                                option.name.toLowerCase().includes(term) ||
-                                option.value.toLowerCase().includes(term)
-                              );
-                            })
-                            .slice(0, 80)
-                            .map(option => {
-                              const active = selectedOutlet?.value === option.value;
-                              return (
-                                <TouchableOpacity
-                                  key={option.value}
-                                  style={styles.modalItem}
-                                  onPress={() => {
-                                    setSelectedOutlet(option);
-                                  }}>
-                                  <Text
-                                    style={
-                                      active
-                                        ? styles.modalItemTextActive
-                                        : styles.modalItemText
-                                    }>
-                                    {option.name}
-                                  </Text>
-                                  <Text style={styles.modalItemSub}>{option.value}</Text>
-                                </TouchableOpacity>
-                              );
-                            })
-                        : brandOptions
-                            .filter(option =>
-                              option
-                                .toLowerCase()
-                                .includes(searchQuery.toLowerCase()),
-                            )
-                            .slice(0, 80)
-                            .map(option => {
-                              const active = selectedBrands.includes(option);
-                              return (
-                                <TouchableOpacity
-                                  key={option}
-                                  style={styles.modalItem}
-                                  onPress={() => {
-                                    setSelectedBrands(prev =>
-                                      prev.includes(option)
-                                        ? prev.filter(b => b !== option)
-                                        : [...prev, option],
-                                    );
-                                  }}>
-                                  <Text
-                                    style={
-                                      active
-                                        ? styles.modalItemTextActive
-                                        : styles.modalItemText
-                                    }>
-                                    {option}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                    </ScrollView>
-                  </View>
-                </TouchableWithoutFeedback>
+              {metaError ? (
+                <Text style={styles.metaError}>{metaError}</Text>
+              ) : null}
+
+              {isLoading ? (
+                <ActivityIndicator style={styles.loading} />
+              ) : (
+                <TouchableOpacity
+                  style={styles.button}
+                  activeOpacity={0.8}
+                  onPress={handleRegister}>
+                  <Text style={styles.buttonText}>Register</Text>
+                </TouchableOpacity>
+              )}
+
+              <View style={styles.registerRow}>
+                <Text style={styles.registerText}>Sudah punya akun?</Text>
+                <Text style={styles.registerLink} onPress={onNavigateLogin}>
+                  {' '}Login
+                </Text>
               </View>
-            </TouchableWithoutFeedback>
-          </KeyboardAvoidingView>
-        </Modal>
-      </Screen>
-    </KeyboardAvoidingView>
+            </Card>
+          </ScrollView>
+
+          <Modal
+            visible={pickerType !== null}
+            transparent
+            animationType="fade"
+            onRequestClose={closePicker}>
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <TouchableWithoutFeedback onPress={closePicker}>
+                <View style={styles.modalBackdrop}>
+                  <TouchableWithoutFeedback>
+                    <View style={styles.modalContainer}>
+                      <View style={styles.modalHeaderRow}>
+                        <Text style={styles.modalTitle}>
+                          {pickerType === 'jabatan'
+                            ? 'Pilih Jabatan'
+                            : pickerType === 'outlet'
+                            ? 'Pilih Outlet'
+                            : 'Pilih Brand'}
+                        </Text>
+                        {hasPickerSelection && (
+                          <TouchableOpacity
+                            style={styles.modalPrimaryButtonSmall}
+                            activeOpacity={0.8}
+                            onPress={closePicker}>
+                            <Text style={styles.modalPrimaryButtonText}>Simpan</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <TextInput
+                        style={styles.searchInput}
+                        placeholder="Cari..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                      />
+                      <ScrollView keyboardShouldPersistTaps="handled">
+                        {pickerType === 'jabatan' && (
+                          <View style={styles.chipContainer}>
+                            {jabatanOptions
+                              .filter(option =>
+                                option
+                                  .toLowerCase()
+                                  .includes(searchQuery.toLowerCase()),
+                              )
+                              .slice(0, 80)
+                              .map(option => {
+                                const active = jabatan === option;
+                                return (
+                                  <TouchableOpacity
+                                    key={option}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() => {
+                                      setJabatan(option);
+                                    }}>
+                                    <Text
+                                      style={
+                                        active
+                                          ? styles.chipTextActive
+                                          : styles.chipText
+                                      }>
+                                      {option}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                          </View>
+                        )}
+
+                        {pickerType === 'outlet' && (
+                          <View>
+                            {outletOptions
+                              .filter(option => {
+                                const term = searchQuery.toLowerCase();
+                                return (
+                                  option.name.toLowerCase().includes(term) ||
+                                  option.value.toLowerCase().includes(term)
+                                );
+                              })
+                              .slice(0, 80)
+                              .map(option => {
+                                const active = selectedOutlet?.value === option.value;
+                                return (
+                                  <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                      styles.modalItemCard,
+                                      active && styles.modalItemCardActive,
+                                    ]}
+                                    onPress={() => {
+                                      setSelectedOutlet(option);
+                                    }}>
+                                    <Text
+                                      style={
+                                        active
+                                          ? styles.modalItemTextActive
+                                          : styles.modalItemText
+                                      }>
+                                      {option.name}
+                                    </Text>
+                                    <Text style={styles.modalItemSub}>{option.value}</Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                          </View>
+                        )}
+
+                        {pickerType === 'brand' && (
+                          <View style={styles.chipContainer}>
+                            {brandOptions
+                              .filter(option =>
+                                option
+                                  .toLowerCase()
+                                  .includes(searchQuery.toLowerCase()),
+                              )
+                              .slice(0, 80)
+                              .map(option => {
+                                const active = selectedBrands.includes(option);
+                                return (
+                                  <TouchableOpacity
+                                    key={option}
+                                    style={[
+                                      styles.chip,
+                                      active && styles.chipActive,
+                                    ]}
+                                    onPress={() => {
+                                      setSelectedBrands(prev =>
+                                        prev.includes(option)
+                                          ? prev.filter(b => b !== option)
+                                          : [...prev, option],
+                                      );
+                                    }}>
+                                    <Text
+                                      style={
+                                        active
+                                          ? styles.chipTextActive
+                                          : styles.chipText
+                                      }>
+                                      {option}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                          </View>
+                        )}
+                      </ScrollView>
+                    </View>
+                  </TouchableWithoutFeedback>
+                </View>
+              </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+          </Modal>
+        </Screen>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -461,7 +487,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   formContent: {
-    paddingBottom: 8,
+    paddingBottom: 160,
   },
   input: {
     borderWidth: 1,
@@ -555,8 +581,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 12,
-    maxHeight: '60%',
+    paddingBottom: 24,
+    maxHeight: '70%',
   },
   modalTitle: {
     fontSize: 16,
@@ -585,6 +611,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  modalItemCard: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+    backgroundColor: colors.surface,
+  },
+  modalItemCardActive: {
+    borderColor: '#2196f3',
+    backgroundColor: 'rgba(33, 150, 243, 0.06)',
+  },
   modalItemText: {
     fontSize: 14,
     color: colors.textPrimary,
@@ -597,6 +636,33 @@ const styles = StyleSheet.create({
   modalItemSub: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
+    backgroundColor: colors.surface,
+  },
+  chipActive: {
+    borderColor: '#2196f3',
+    backgroundColor: 'rgba(33, 150, 243, 0.08)',
+  },
+  chipText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
+  chipTextActive: {
+    fontSize: 14,
+    color: '#2196f3',
+    fontWeight: '600',
   },
   modalCloseButton: {
     marginTop: 8,
