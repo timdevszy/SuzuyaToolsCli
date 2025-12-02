@@ -36,6 +36,7 @@ function useDiscountInternal() {
   const scanAndAdd = useCallback(
     async (code: string) => {
       if (!config) {
+        setError('Config discount belum di-set. Silakan set config terlebih dahulu.');
         throw new Error('Config discount belum di-set');
       }
       setIsLoading(true);

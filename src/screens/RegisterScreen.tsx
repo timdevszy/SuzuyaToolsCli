@@ -35,9 +35,9 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [jabatan, setJabatan] = useState('Staff');
   const [divisi, setDivisi] = useState('');
-  const [selectedOutlet, setSelectedOutlet] = useState<
-    { value: string; name: string } | undefined
-  >(undefined);
+  const [selectedOutlets, setSelectedOutlets] = useState<
+    { value: string; name: string }[]
+  >([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
   const [pickerType, setPickerType] = useState<
@@ -61,6 +61,32 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
   }, [clearError]);
 
   const handleRegister = async () => {
+    // Validasi sederhana di sisi frontend sebelum kirim ke backend.
+    if (!name.trim()) {
+      Alert.alert('Validasi', 'Nama lengkap wajib diisi.');
+      return;
+    }
+
+    if (!username.trim()) {
+      Alert.alert('Validasi', 'Username wajib diisi.');
+      return;
+    }
+
+    if (!password) {
+      Alert.alert('Validasi', 'Password wajib diisi.');
+      return;
+    }
+
+    if (!divisi.trim()) {
+      Alert.alert('Validasi', 'Divisi wajib diisi.');
+      return;
+    }
+
+    if (selectedOutlets.length === 0) {
+      Alert.alert('Validasi', 'Minimal pilih satu outlet.');
+      return;
+    }
+
     const payload: RegisterPayload = {
       name,
       username,
@@ -69,7 +95,7 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
       jabatan,
       divisi,
       brands: selectedBrands,
-      outlet_choice: selectedOutlet ? [selectedOutlet] : [],
+      outlet_choice: selectedOutlets,
     };
 
     // eslint-disable-next-line no-console
@@ -153,10 +179,6 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
               .filter(Boolean)
           : [];
         setBrandOptions(brandList);
-
-        if (!selectedOutlet && outletList.length > 0) {
-          setSelectedOutlet(outletList[0]);
-        }
       } catch (e: any) {
         // eslint-disable-next-line no-console
         console.log('Failed to load jabatan/outlet', e?.response?.data || e);
@@ -183,7 +205,7 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
     pickerType === 'jabatan'
       ? !!jabatan
       : pickerType === 'outlet'
-      ? !!selectedOutlet
+      ? selectedOutlets.length > 0
       : selectedBrands.length > 0;
 
   return (
@@ -265,9 +287,15 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
                 onPress={() => openPicker('outlet')}>
                 <Text
                   style={
-                    selectedOutlet ? styles.selectValue : styles.selectPlaceholder
+                    selectedOutlets.length > 0
+                      ? styles.selectValue
+                      : styles.selectPlaceholder
                   }>
-                  {selectedOutlet ? selectedOutlet.name : 'Pilih outlet'}
+                  {selectedOutlets.length === 0
+                    ? 'Pilih outlet'
+                    : selectedOutlets.length === 1
+                    ? selectedOutlets[0].name
+                    : `${selectedOutlets.length} outlet dipilih`}
                 </Text>
                 <Text style={styles.selectChevron}>{metaLoading ? '…' : '⌵'}</Text>
               </TouchableOpacity>
@@ -401,7 +429,9 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
                               })
                               .slice(0, 80)
                               .map(option => {
-                                const active = selectedOutlet?.value === option.value;
+                                const active = selectedOutlets.some(
+                                  o => o.value === option.value,
+                                );
                                 return (
                                   <TouchableOpacity
                                     key={option.value}
@@ -410,7 +440,11 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
                                       active && styles.modalItemCardActive,
                                     ]}
                                     onPress={() => {
-                                      setSelectedOutlet(option);
+                                      setSelectedOutlets(prev =>
+                                        prev.some(o => o.value === option.value)
+                                          ? prev.filter(o => o.value !== option.value)
+                                          : [...prev, option],
+                                      );
                                     }}>
                                     <Text
                                       style={

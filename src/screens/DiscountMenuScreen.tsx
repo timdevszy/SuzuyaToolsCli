@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../ui/theme';
 import { Icon } from '../ui/Icon';
 import { useDiscount } from '../hooks/useDiscount';
+import { defaultPrinterSettings, printDiscountLabel } from '../services/printerService';
 
 interface DiscountMenuScreenProps {
   onOpenPrinter: () => void;
@@ -117,11 +118,41 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
                             style={[styles.actionButton, styles.actionButtonDanger]}
                             activeOpacity={0.8}
                             onPress={() => {
-                              console.log('[Discount] Remove item from Discount menu', {
-                                id: item.id,
-                                code: item.code,
-                              });
-                              removeItem(item.id);
+                              const payload = { id: item.id, code: item.code };
+
+                              console.log(
+                                '[Discount] Request remove item from Discount menu',
+                                payload,
+                              );
+
+                              Alert.alert(
+                                'Hapus item',
+                                `Yakin ingin menghapus produk dengan kode ${item.code}?`,
+                                [
+                                  {
+                                    text: 'Batal',
+                                    style: 'cancel',
+                                    onPress: () => {
+                                      console.log(
+                                        '[Discount] Cancel remove item from Discount menu',
+                                        payload,
+                                      );
+                                    },
+                                  },
+                                  {
+                                    text: 'Hapus',
+                                    style: 'destructive',
+                                    onPress: () => {
+                                      console.log(
+                                        '[Discount] Confirm remove item from Discount menu',
+                                        payload,
+                                      );
+                                      removeItem(item.id);
+                                    },
+                                  },
+                                ],
+                                { cancelable: true },
+                              );
                             }}>
                             <Text style={styles.actionButtonTextDanger}>Hapus</Text>
                           </TouchableOpacity>
@@ -129,11 +160,52 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
                             style={[styles.actionButton, styles.actionButtonPrimary]}
                             activeOpacity={0.8}
                             onPress={() => {
-                              console.log('[Discount] Print barcode for item', {
+                              const raw: any = item.data || {};
+                              const data =
+                                Array.isArray(raw.results) && raw.results.length > 0
+                                  ? raw.results[0]
+                                  : raw;
+
+                              const internal = data.internal || item.code;
+                              const name = data.descript || '-';
+                              const retailPrice =
+                                data.rrtlprc ?? data.harga ?? data.retail_price ?? 0;
+                              const discountPrice =
+                                data.harga_diskon ?? data.harga_promo ?? retailPrice;
+                              const barcodeBaru =
+                                data.barcode || data.code_barcode_baru || item.code;
+                              const qty = 1;
+                              const uomsales = data.uomsales || 'PCS';
+
+                              const label = {
+                                productName: name,
+                                internalCode: internal,
+                                barcode: barcodeBaru,
+                                unitLabel: `${qty} ${uomsales}`,
+                                normalPrice: Number(retailPrice) || 0,
+                                discountPrice: Number(discountPrice) || 0,
+                              };
+
+                              console.log('[Discount] Print label for item', {
                                 id: item.id,
                                 code: item.code,
+                                label,
                               });
-                              Alert.alert('Print', 'Fitur print belum diimplementasikan.');
+
+                              printDiscountLabel(label, defaultPrinterSettings)
+                                .then(() => {
+                                  Alert.alert(
+                                    'Print',
+                                    'Label diskon berhasil disiapkan untuk dicetak.',
+                                  );
+                                })
+                                .catch(e => {
+                                  console.log('[Printer] Gagal menyiapkan label diskon', e);
+                                  Alert.alert(
+                                    'Gagal print',
+                                    'Terjadi kesalahan saat menyiapkan label untuk printer.',
+                                  );
+                                });
                             }}>
                             <Text style={styles.actionButtonTextPrimary}>Print</Text>
                           </TouchableOpacity>

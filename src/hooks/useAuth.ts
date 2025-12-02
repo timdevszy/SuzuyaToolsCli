@@ -40,13 +40,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const u = await authService.login({ username, password });
+
+      // Log sukses dari backend sebelum validasi status.
+      // eslint-disable-next-line no-console
+      console.log('[Auth] Login response', {
+        username: u?.username,
+        status: (u as any)?.status,
+        login_status: (u as any)?.login_status,
+      });
+
+      // Validasi status user di sisi frontend.
+      if ((u as any)?.status !== 1) {
+        const msg =
+          'Akun Anda belum aktif. Silakan hubungi IT toko untuk mengaktifkan akun.';
+
+        // eslint-disable-next-line no-console
+        console.warn('[Auth] Login blocked: user not active', {
+          username: u?.username,
+          status: (u as any)?.status,
+        });
+
+        setError(msg);
+        // Jangan simpan session / setUser jika status belum aktif.
+        throw new Error(msg);
+      }
+
       setUser(u);
       await authStorage.saveSession(u);
       return u;
     } catch (e: any) {
       const backend = e?.response?.data;
       // eslint-disable-next-line no-console
-      console.log('Login error', backend || e);
+      console.log('[Auth] Login error', backend || e);
       let msg = backend?.message || backend?.msg || e?.message || 'Login gagal';
 
       if (typeof msg === 'string') {
@@ -69,12 +94,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       try {
         const u = await authService.register(payload);
+
+        // Log hasil register dari backend.
+        // eslint-disable-next-line no-console
+        console.log('[Auth] Register response', {
+          username: u?.username,
+          status: (u as any)?.status,
+          login_status: (u as any)?.login_status,
+        });
+
+        // Jika backend mengembalikan status belum aktif, beri pesan ramah.
+        if ((u as any)?.status !== 1) {
+          // eslint-disable-next-line no-console
+          console.info('[Auth] Register user not active yet', {
+            username: u?.username,
+            status: (u as any)?.status,
+          });
+
+          setError(
+            'Registrasi berhasil, namun akun Anda belum aktif. ' +
+              'Silakan minta IT toko untuk mengaktifkan akun melalui dashboard.',
+          );
+        }
+
         // Tidak auto-login setelah register; cukup kembalikan hasilnya.
         return u;
       } catch (e: any) {
         const backend = e?.response?.data;
         // eslint-disable-next-line no-console
-        console.log('Register error', backend || e);
+        console.log('[Auth] Register error', backend || e);
         let rawMsg: unknown =
           backend?.message || backend?.msg || e?.message || backend || 'Register gagal';
 
