@@ -2,6 +2,9 @@
 // underline, dan gambar PNG). Untuk Print Test 1 saat ini kita kembali ke
 // versi paling sederhana: hanya mencetak teks sekali, tanpa gambar.
 
+import EncryptedStorage from 'react-native-encrypted-storage';
+import type { DiscountLabelData } from './printerService';
+
 export interface ClassicPrinterDevice {
   name: string;
   address: string;
@@ -9,6 +12,38 @@ export interface ClassicPrinterDevice {
 
 let currentPrinterAddress: string | null = null;
 let currentPrinterName: string | null = null;
+
+const LAST_PRINTER_KEY = 'classic_printer_last';
+
+async function saveLastPrinterInfo(address: string, name?: string | null): Promise<void> {
+  try {
+    await EncryptedStorage.setItem(
+      LAST_PRINTER_KEY,
+      JSON.stringify({ address, name: name || null }),
+    );
+  } catch {
+    // abaikan error simpan, tidak boleh mengganggu flow utama
+  }
+}
+
+async function loadLastPrinterInfo(): Promise<{ address: string | null; name: string | null }> {
+  try {
+    const raw = await EncryptedStorage.getItem(LAST_PRINTER_KEY);
+    if (!raw) {
+      return { address: null, name: null };
+    }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        address: typeof parsed.address === 'string' ? parsed.address : null,
+        name: typeof parsed.name === 'string' ? parsed.name : null,
+      };
+    }
+  } catch {
+    // abaikan error baca / parse
+  }
+  return { address: null, name: null };
+}
 
 let BluetoothManager: any = null;
 let BluetoothEscposPrinter: any = null;
@@ -110,6 +145,7 @@ export async function connectToClassicPrinter(address: string, name?: string): P
   await BluetoothManager.connect(address);
   currentPrinterAddress = address;
   currentPrinterName = name || address;
+  await saveLastPrinterInfo(currentPrinterAddress, currentPrinterName);
 }
 
 export function getCurrentPrinterAddress(): string | null {
@@ -118,6 +154,13 @@ export function getCurrentPrinterAddress(): string | null {
 
 export function getCurrentPrinterInfo(): { address: string | null; name: string | null } {
   return { address: currentPrinterAddress, name: currentPrinterName };
+}
+
+export async function getLastPrinterInfo(): Promise<{ address: string | null; name: string | null }> {
+  if (currentPrinterAddress) {
+    return { address: currentPrinterAddress, name: currentPrinterName };
+  }
+  return loadLastPrinterInfo();
 }
 
 export async function disconnectClassicPrinter(): Promise<void> {
@@ -179,4 +222,81 @@ export async function printSimpleTestLabel(): Promise<void> {
   });
 
   await BluetoothEscposPrinter.printAndFeed(30);
+}
+
+export async function printDiscountLabelOnClassicPrinter(
+  label: DiscountLabelData,
+): Promise<void> {
+  if (!ensureNativeModuleLoaded()) {
+    // eslint-disable-next-line no-console
+    console.warn('[ClassicPrinter] Module printer klasik belum siap, tidak bisa print label diskon');
+    throw new Error('Printer klasik belum siap');
+  }
+  if (!currentPrinterAddress) {
+    // eslint-disable-next-line no-console
+    console.warn('[ClassicPrinter] Tidak ada printer yang terhubung untuk print label diskon');
+    throw new Error('Tidak ada printer yang terhubung');
+  }
+
+  await BluetoothEscposPrinter.printerInit();
+  await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
+
+  const baseTextOpts = {
+    encoding: 'UTF-8',
+    codepage: 0,
+    widthtimes: 0,
+    heigthtimes: 0,
+    fonttype: 0,
+  } as const;
+
+  const headlineOpts = {
+    ...baseTextOpts,
+    widthtimes: 1,
+    heigthtimes: 1,
+  } as const;
+
+  const normalStr = label.normalPrice.toLocaleString('id-ID');
+  const discountStr = label.discountPrice.toLocaleString('id-ID');
+
+  const discountPercent =
+    label.normalPrice > 0
+      ? Math.round(((label.normalPrice - label.discountPrice) / label.normalPrice) * 100)
+      : 0;
+
+  const hasDiscountPercent = discountPercent > 0 && discountPercent < 100;
+  const headline = hasDiscountPercent ? `HEMAT ${discountPercent}%` : 'HEMAT';
+
+  await BluetoothEscposPrinter.printText(`${headline}\n`, headlineOpts);
+  await BluetoothEscposPrinter.printText(`${label.productName}\n`, baseTextOpts);
+
+  // Satu baris kosong kecil di antara nama produk dan Qty
+  await BluetoothEscposPrinter.printText(`Qty : ${label.unitLabel}\n`, baseTextOpts);
+
+  if (BluetoothEscposPrinter.printBarCode) {
+    try {
+      await BluetoothEscposPrinter.printBarCode(
+        label.barcode,
+        BluetoothEscposPrinter.BARCODETYPE.CODE128,
+        2,
+        80,
+        BluetoothEscposPrinter.ALIGN.CENTER,
+        2,
+      );
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[ClassicPrinter] Gagal mencetak barcode, lanjut dengan teks saja', e);
+    }
+  }
+
+  // Cetak kode barcode tepat di bawah gambar barcode
+  await BluetoothEscposPrinter.printText(`${label.barcode}\n`, baseTextOpts);
+
+  await BluetoothEscposPrinter.printText(
+    `Harga : Rp ${normalStr} Rp. ${discountStr}\n`,
+    baseTextOpts,
+  );
+
+  // Feed cukup panjang supaya label berikutnya mulai di bawah baris Harga,
+  // sehingga Harga selalu menjadi bagian paling bawah dari satu label.
+  await BluetoothEscposPrinter.printAndFeed(25);
 }

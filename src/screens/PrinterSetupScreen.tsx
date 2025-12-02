@@ -27,6 +27,7 @@ import {
   type ClassicPrinterDevice,
   getCurrentPrinterAddress,
   getCurrentPrinterInfo,
+  getLastPrinterInfo,
   disconnectClassicPrinter,
 } from '../services/classicPrinterService';
 
@@ -44,6 +45,10 @@ export function PrinterSetupScreen({ onDone }: Props) {
   const [devices, setDevices] = useState<ClassicPrinterDevice[]>([]);
   const [selectedDeviceAddress, setSelectedDeviceAddress] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [lastKnownPrinter, setLastKnownPrinter] = useState<{ address: string | null; name: string | null }>({
+    address: null,
+    name: null,
+  });
   const { setIsPrinterConfigured } = useDiscount();
   const [activeSlide, setActiveSlide] = useState(0);
   const { width } = useWindowDimensions();
@@ -56,13 +61,26 @@ export function PrinterSetupScreen({ onDone }: Props) {
   };
 
   useEffect(() => {
-    const { address, name } = getCurrentPrinterInfo();
-    if (address) {
-      setDeviceType('bluetooth');
-      setPrinterName(name || address);
-      setSelectedDeviceAddress(prev => prev || address);
-      setIsConnected(true);
-    }
+    (async () => {
+      const { address, name } = getCurrentPrinterInfo();
+      if (address) {
+        setDeviceType('bluetooth');
+        setPrinterName(name || address);
+        setSelectedDeviceAddress(prev => prev || address);
+        setIsConnected(true);
+        setLastKnownPrinter({ address, name: name || address });
+        return;
+      }
+
+      const last = await getLastPrinterInfo();
+      if (last.address) {
+        setDeviceType('bluetooth');
+        setPrinterName(last.name || last.address);
+        setSelectedDeviceAddress(prev => prev || last.address);
+        setIsConnected(false);
+        setLastKnownPrinter({ address: last.address, name: last.name || last.address });
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -231,19 +249,32 @@ export function PrinterSetupScreen({ onDone }: Props) {
                     }
                   } else {
                     // Connect flow
-                    if (devices.length === 0) {
-                      Alert.alert(
-                        'Belum ada printer',
-                        'Silakan tekan Refresh lalu pilih printer terlebih dahulu.',
-                      );
-                      return;
-                    }
                     try {
-                      const target =
-                        devices.find(d => d.address === selectedDeviceAddress) ??
-                        devices[0];
-                      await connectToClassicPrinter(target.address, target.name || target.address);
-                      setPrinterName(target.name || target.address);
+                      let targetAddress: string | null = null;
+                      let targetName: string | null = null;
+
+                      if (devices.length > 0) {
+                        const targetDevice =
+                          devices.find(d => d.address === selectedDeviceAddress) ??
+                          devices[0];
+                        targetAddress = targetDevice.address;
+                        targetName = targetDevice.name || targetDevice.address;
+                      } else if (lastKnownPrinter.address) {
+                        // Tidak ada hasil scan saat ini, tapi kita punya printer terakhir
+                        targetAddress = lastKnownPrinter.address;
+                        targetName = lastKnownPrinter.name || lastKnownPrinter.address;
+                      }
+
+                      if (!targetAddress) {
+                        Alert.alert(
+                          'Belum ada printer',
+                          'Silakan tekan Refresh lalu pilih printer terlebih dahulu.',
+                        );
+                        return;
+                      }
+
+                      await connectToClassicPrinter(targetAddress, targetName || undefined);
+                      setPrinterName(targetName || targetAddress);
                       setIsConnected(true);
                       handleSave();
                       Alert.alert(
@@ -308,31 +339,51 @@ export function PrinterSetupScreen({ onDone }: Props) {
         );
       })()}
 
-      {deviceType === 'bluetooth' && devices.length > 0 && (
-        <View style={styles.devicesListCard}>
-          <Text style={styles.devicesListTitle}>Pilih Printer Bluetooth</Text>
-          <ScrollView style={styles.devicesList}>
-            {devices.map(d => {
-              const isSelected = d.address === selectedDeviceAddress;
-              return (
-                <TouchableOpacity
-                  key={d.address}
-                  style={[
-                    styles.deviceItem,
-                    isSelected && styles.deviceItemSelected,
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() => setSelectedDeviceAddress(d.address)}>
-                  <View>
-                    <Text style={styles.deviceItemName}>{d.name || 'Unknown'}</Text>
-                    <Text style={styles.deviceItemAddress}>{d.address}</Text>
-                  </View>
-                  {isSelected && <Text style={styles.deviceItemSelectedMark}>✓</Text>}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+      {deviceType === 'bluetooth' && (
+        <>
+          {lastKnownPrinter.address && (
+            <View style={styles.recentDeviceCard}>
+              <Text style={styles.devicesListTitle}>Printer terakhir dipakai</Text>
+              <TouchableOpacity
+                style={[styles.deviceItem, styles.deviceItemSelected]}
+                activeOpacity={0.8}
+                onPress={() => setSelectedDeviceAddress(lastKnownPrinter.address!)}>
+                <View>
+                  <Text style={styles.deviceItemName}>{lastKnownPrinter.name || 'Unknown'}</Text>
+                  <Text style={styles.deviceItemAddress}>{lastKnownPrinter.address}</Text>
+                </View>
+                <Text style={styles.deviceItemSelectedMark}>✓</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {devices.length > 0 && (
+            <View style={styles.devicesListCard}>
+              <Text style={styles.devicesListTitle}>Pilih Printer Bluetooth</Text>
+              <ScrollView style={styles.devicesList}>
+                {devices.map(d => {
+                  const isSelected = d.address === selectedDeviceAddress;
+                  return (
+                    <TouchableOpacity
+                      key={d.address}
+                      style={[
+                        styles.deviceItem,
+                        isSelected && styles.deviceItemSelected,
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => setSelectedDeviceAddress(d.address)}>
+                      <View>
+                        <Text style={styles.deviceItemName}>{d.name || 'Unknown'}</Text>
+                        <Text style={styles.deviceItemAddress}>{d.address}</Text>
+                      </View>
+                      {isSelected && <Text style={styles.deviceItemSelectedMark}>✓</Text>}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </>
       )}
 
       {/* Section: label previews (slider) */}
@@ -715,6 +766,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
+  },
+  recentDeviceCard: {
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
   },
   devicesListTitle: {
     fontSize: 14,

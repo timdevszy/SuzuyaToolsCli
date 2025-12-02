@@ -3,6 +3,7 @@
 // data dan fungsi yang mudah dihubungkan dengan implementasi printer nyata.
 
 import { encodeCode128 } from '../utils/encodeCode128';
+import { printDiscountLabelOnClassicPrinter } from './classicPrinterService';
 
 export interface PrinterSettings {
   // Apakah harga normal harus dicoret (wajib true di kasus diskon)
@@ -116,4 +117,6 @@ export async function printDiscountLabel(
     patterns: job.barcodeEncoding.patterns,
     escposLength: bytes.length,
   });
+
+   await printDiscountLabelOnClassicPrinter(label);
 }
