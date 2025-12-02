@@ -1,3 +1,7 @@
+// Catatan: sebelumnya kita sempat mencoba berbagai pendekatan (garis ASCII,
+// underline, dan gambar PNG). Untuk Print Test 1 saat ini kita kembali ke
+// versi paling sederhana: hanya mencetak teks sekali, tanpa gambar.
+
 export interface ClassicPrinterDevice {
   name: string;
   address: string;
@@ -159,36 +163,14 @@ export async function printSimpleTestLabel(): Promise<void> {
   await BluetoothEscposPrinter.printerInit();
   await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
   const textTop = 'Rp 10.500';
-  const textBottom = 'Rp  6.000';
-  // Garis diletakkan di baris kedua dan digeser dengan spasi sehingga kurang-lebih berada di bawah angka "10.500".
-  // Gunakan hanya karakter ASCII '-' agar tidak muncul simbol aneh di beberapa printer/codepage.
-  // Jumlah spasi + panjang garis bisa di-tune lagi bila posisi di kertas masih kurang pas.
-  const line = '   ----------';
-  const lineText = `${line}\n`;
 
   // eslint-disable-next-line no-console
   console.log('[Printer] Test1 simple text', {
-    line: lineText,
     top: textTop,
-    bottom: textBottom,
   });
 
-  // Cetak harga normal, lalu garis tepat di bawah angka, lalu harga diskon
-  await BluetoothEscposPrinter.printText(`${textTop}\n`, {
-    encoding: 'UTF-8',
-    codepage: 0,
-    widthtimes: 0,
-    heigthtimes: 0,
-    fonttype: 0,
-  });
-  await BluetoothEscposPrinter.printText(lineText, {
-    encoding: 'UTF-8',
-    codepage: 0,
-    widthtimes: 0,
-    heigthtimes: 0,
-    fonttype: 0,
-  });
-  await BluetoothEscposPrinter.printText(`${textBottom}\n\n`, {
+  // Cetak satu baris harga sederhana untuk test
+  await BluetoothEscposPrinter.printText(`${textTop}\n\n`, {
     encoding: 'UTF-8',
     codepage: 0,
     widthtimes: 0,
