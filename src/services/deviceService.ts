@@ -1,16 +1,16 @@
 import EncryptedStorage from 'react-native-encrypted-storage';
 
-const DEVICE_ID_KEY = 'device_id';
+// Key untuk menyimpan mapping username -> device_id di EncryptedStorage.
+// Bentuk datanya adalah JSON object, contoh:
+// {
+//   "user_a": "uuid-v4-1",
+//   "user_b": "uuid-v4-2"
+// }
 const DEVICE_ID_MAP_KEY = 'device_id_by_username';
 
-// SEMENTARA: hardcode device_id untuk testing login dengan akun existing.
-// Nanti setelah backend register/reset device sudah beres, fungsi ini bisa
-// dikembalikan ke versi yang generate UUID baru dan menyimpannya di storage.
-const FIXED_DEVICE_ID =
-  '85cb2002b9fe42ca6328271c1512f03d57962c24a1e235466612ac230ed9fda8';
-
+// Generate UUID v4 sederhana tanpa dependency eksternal.
+// Hanya menggunakan Math.random(), tidak mengambil data hardware / IMEI / dsb.
 function generateUuidV4(): string {
-  // Implementasi sederhana UUID v4 tanpa dependency eksternal
   // eslint-disable-next-line no-bitwise
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = (Math.random() * 16) | 0;
@@ -20,33 +20,13 @@ function generateUuidV4(): string {
   });
 }
 
-export async function getOrCreateDeviceId(): Promise<string> {
-  try {
-    const existing = await EncryptedStorage.getItem(DEVICE_ID_KEY);
-
-    // Jika sudah ada device_id dan bukan fixed legacy, pakai yang ada
-    if (existing && existing !== FIXED_DEVICE_ID) {
-      return existing;
-    }
-  } catch {
-    // Abaikan error read storage, lanjut generate baru
-  }
-
-  const newId = generateUuidV4();
-
-  try {
-    await EncryptedStorage.setItem(DEVICE_ID_KEY, newId);
-  } catch {
-    // Jika gagal menyimpan, tetap kembalikan newId agar register tetap bisa jalan
-  }
-
-  return newId;
-}
-
+// Struktur map username -> device_id yang disimpan di storage.
 type DeviceIdMap = {
   [username: string]: string;
 };
 
+// Membaca map device_id dari EncryptedStorage.
+// Jika belum ada atau gagal parse, akan mengembalikan object kosong.
 async function loadDeviceIdMap(): Promise<DeviceIdMap> {
   try {
     const raw = await EncryptedStorage.getItem(DEVICE_ID_MAP_KEY);
@@ -58,27 +38,35 @@ async function loadDeviceIdMap(): Promise<DeviceIdMap> {
       return parsed as DeviceIdMap;
     }
   } catch {
-    // abaikan error parse/storage, kembalikan map kosong
+    // Abaikan error baca / parse storage, gunakan map kosong sebagai fallback.
   }
   return {};
 }
 
+// Menyimpan map username -> device_id ke EncryptedStorage.
+// Error penyimpanan tidak boleh memblokir flow auth, jadi error diabaikan.
 async function saveDeviceIdMap(map: DeviceIdMap): Promise<void> {
   try {
     await EncryptedStorage.setItem(DEVICE_ID_MAP_KEY, JSON.stringify(map));
   } catch {
-    // abaikan error simpan, tidak boleh blokir flow auth
+    // Abaikan error simpan; di lain waktu map akan dibuat ulang jika perlu.
   }
 }
 
+// Mengambil atau membuat device_id khusus untuk satu username.
+// - Username akan di-normalisasi ke lowercase dan di-trim.
+// - Jika username sudah punya device_id di map, gunakan nilai yang sama (persisten).
+// - Jika belum ada, generate UUID v4 baru, simpan ke map, lalu kembalikan.
+// Catatan: device_id ini murni acak (berbasis Math.random), tidak
+//          mengandung informasi hardware atau data pribadi lainnya.
 export async function getOrCreateDeviceIdForUsername(
   username: string,
 ): Promise<string> {
   const safeUsername = username.trim().toLowerCase();
 
-  // fallback: kalau username kosong, pakai device-level ID biasa
+  // Jika username kosong, tetap generate UUID baru sekali pakai.
   if (!safeUsername) {
-    return getOrCreateDeviceId();
+    return generateUuidV4();
   }
 
   const map = await loadDeviceIdMap();
