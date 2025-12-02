@@ -16,6 +16,7 @@ type AuthContextValue = {
   login: (username: string, password: string) => Promise<LoginResultUser>;
   register: (payload: RegisterPayload) => Promise<LoginResultUser>;
   logout: () => void;
+  clearError: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -46,8 +47,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const backend = e?.response?.data;
       // eslint-disable-next-line no-console
       console.log('Login error', backend || e);
-      const msg =
-        backend?.message || backend?.msg || e?.message || 'Login gagal';
+      let msg = backend?.message || backend?.msg || e?.message || 'Login gagal';
+
+      if (typeof msg === 'string') {
+        const lower = msg.toLowerCase();
+        if (lower.includes('username atau password atau id')) {
+          msg = 'Username atau password Anda tidak sesuai.';
+        }
+      }
+
       setError(msg);
       throw e;
     } finally {
@@ -86,6 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             msg =
               'Perangkat ini sudah memiliki akun terdaftar. Silakan login dengan akun tersebut.';
           }
+          if (lower.includes('username atau password atau id')) {
+            msg = 'Username atau password Anda tidak sesuai.';
+          }
         }
 
         setError(msg as string);
@@ -102,6 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authStorage.clearSession();
   }, []);
 
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   const value: AuthContextValue = {
     user,
     isLoading,
@@ -109,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     register,
     logout,
+    clearError,
   };
 
   return React.createElement(AuthContext.Provider, { value }, children);
