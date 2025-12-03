@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Modal,
   Alert,
 } from 'react-native';
+import { Camera, CameraType } from 'react-native-camera-kit';
 import { useDiscount } from '../hooks/useDiscount';
 import { Icon } from '../ui/Icon';
 
@@ -20,15 +20,13 @@ interface Props {
 export function DiscountScanScreen({ onBack }: Props) {
   const {
     config,
-    items,
     isLoading,
     error,
     scanAndAdd,
-    removeItem,
-    clearItems,
   } = useDiscount();
   const [code, setCode] = useState('');
   const [cameraVisible, setCameraVisible] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const handleScan = async () => {
     if (!code) {
@@ -60,7 +58,59 @@ export function DiscountScanScreen({ onBack }: Props) {
         code,
         error: e,
       });
-      // error sudah di-set di hook
+
+      const message = error || 'Produk tidak ditemukan atau terjadi kesalahan saat scan.';
+      Alert.alert('Gagal', message);
+    }
+  };
+
+  const handleBarcodeRead = async (event: any) => {
+    if (isScanning) {
+      return;
+    }
+    const payload = event?.nativeEvent || event || {};
+    console.log('[Discount] Camera raw event', payload);
+    const format = String((payload as any).codeFormat || '').toLowerCase();
+    if (format === 'qr') {
+      // Ignore QR codes; backend expects linear barcodes (e.g. EAN-13/Code128)
+      return;
+    }
+    const scannedRaw =
+      (payload as any).codeStringValue ?? event?.codeStringValue ?? event?.data ?? '';
+    const scanned = String(scannedRaw).trim();
+    if (!scanned) {
+      return;
+    }
+
+    console.log('[Discount] Barcode detected from camera', { code: scanned });
+    setIsScanning(true);
+
+    try {
+      await scanAndAdd(scanned);
+      console.log('[Discount] Scan product success (camera)', { code: scanned });
+      setCameraVisible(false);
+      setCode('');
+      Alert.alert(
+        'Berhasil',
+        'Produk berhasil ditambahkan ke daftar discount.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (onBack) {
+                onBack();
+              }
+            },
+          },
+        ],
+        { cancelable: false },
+      );
+    } catch (e) {
+      console.log('[Discount] Scan product failed (camera)', { code: scanned, error: e });
+      const message = error || 'Produk tidak ditemukan atau terjadi kesalahan saat scan.';
+      Alert.alert('Gagal', message);
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -101,31 +151,6 @@ export function DiscountScanScreen({ onBack }: Props) {
         {isLoading && <ActivityIndicator style={{ marginVertical: 8 }} />}
       </View>
 
-      {items.length > 0 && (
-        <FlatList
-          data={items}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{item.code}</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  console.log('[Discount] Remove scanned item', {
-                    id: item.id,
-                    code: item.code,
-                    data: item.data,
-                  });
-                  removeItem(item.id);
-                }}
-                style={styles.removeButton}>
-                <Text style={styles.removeButtonText}>Hapus</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      )}
-
       <Modal
         visible={cameraVisible}
         animationType="slide"
@@ -134,9 +159,18 @@ export function DiscountScanScreen({ onBack }: Props) {
           setCameraVisible(false);
         }}>
         <View style={styles.cameraModalRoot}>
-          <View style={styles.cameraPreview}>
-            <Text style={styles.cameraText}>[ Area Kamera untuk Scan Barcode ]</Text>
-          </View>
+          <Camera
+            style={styles.cameraPreview}
+            cameraType={CameraType.Back}
+            scanBarcode
+            onReadCode={handleBarcodeRead}
+            showFrame
+            frameColor="#22c55e"
+            laserColor="#22c55e"
+            onError={event => {
+              console.log('[Discount] Camera error', event?.nativeEvent || event);
+            }}
+          />
           <TouchableOpacity
             style={styles.cameraCloseButton}
             activeOpacity={0.8}
@@ -214,14 +248,7 @@ const styles = StyleSheet.create({
   cameraPreview: {
     flex: 1,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#22c55e',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cameraText: {
-    color: '#e5e7eb',
-    fontSize: 16,
+    overflow: 'hidden',
   },
   cameraCloseButton: {
     marginTop: 16,
@@ -235,33 +262,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
-  },
-  list: {
-    paddingVertical: 8,
-  },
-  card: {
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    backgroundColor: '#0b1120',
-    borderWidth: 1,
-    borderColor: '#1f2933',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#f9fafb',
-  },
-  cardText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginBottom: 8,
-  },
-  removeButton: {
-    alignSelf: 'flex-end',
-  },
-  removeButtonText: {
-    color: 'red',
   },
 });
