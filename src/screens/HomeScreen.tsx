@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   TouchableWithoutFeedback,
   StatusBar,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
@@ -48,6 +49,36 @@ export function HomeScreen() {
     }
   };
 
+  useEffect(() => {
+    const onHardwareBackPress = () => {
+      // Jika sedang di modal scan, tutup dulu modalnya
+      if (scanModalVisible) {
+        setScanModalVisible(false);
+        return true;
+      }
+
+      // Ikuti logika handleBack lama untuk view selain 'home'
+      if (view === 'discount') {
+        setView('home');
+        return true;
+      }
+      if (view === 'printer' || view === 'config' || view === 'scan') {
+        setView('discount');
+        return true;
+      }
+      if (view === 'profile') {
+        setView('home');
+        return true;
+      }
+
+      // view === 'home' -> biarkan default (keluar app)
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBackPress);
+    return () => sub.remove();
+  }, [view, scanModalVisible]);
+
   const getActiveOutletCode = () => {
     if (!user) return '';
     if (user.default_outlet) return String(user.default_outlet);
@@ -79,13 +110,8 @@ export function HomeScreen() {
           />
         ) : (
           <View style={styles.appBar}>
-            {/* Left: default back button */}
-            <TouchableOpacity
-              style={styles.appBarBack}
-              activeOpacity={0.7}
-              onPress={handleBack}>
-              <Text style={styles.appBarBackText}>{'\u2190'}</Text>
-            </TouchableOpacity>
+            {/* Left: placeholder (no custom back button, rely on system back) */}
+            <View style={styles.appBarBack} />
 
             {/* Center: title */}
             <View style={styles.appBarTitleContainer}>
@@ -114,6 +140,7 @@ export function HomeScreen() {
             style={[
               styles.contentCard,
               view !== 'home' && styles.contentCardPlain,
+              view === 'discount' && { paddingHorizontal: 0 },
             ]}>
             {view === 'home' && (
               <View style={styles.menuGrid}>
@@ -272,7 +299,7 @@ const styles = StyleSheet.create({
   },
   scanModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    backgroundColor: 'rgba(248, 250, 252, 0.9)',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
