@@ -5,9 +5,10 @@ import { colors } from '../ui/theme';
 import { Icon } from '../ui/Icon';
 import { useDiscount } from '../hooks/useDiscount';
 import { defaultPrinterSettings, printDiscountLabel } from '../services/printerService';
+import { encodeCode128BToModules } from '../services/code128Service';
+import * as discountService from '../services/discountService';
 
 interface DiscountMenuScreenProps {
-  onOpenPrinter: () => void;
   onOpenConfig: () => void;
   onOpenScan: () => void;
 }
@@ -19,9 +20,9 @@ function formatCurrency(value: number | string | undefined) {
   return `Rp ${num.toLocaleString('id-ID')}`;
 }
 
-export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: DiscountMenuScreenProps) {
+export function DiscountMenuScreen({ onOpenConfig, onOpenScan }: DiscountMenuScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { items, removeItem } = useDiscount();
+  const { items, removeItem, config } = useDiscount();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -57,8 +58,21 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
                 const retailPrice = data.rrtlprc ?? data.harga ?? data.retail_price;
                 const discountPrice = data.harga_diskon ?? data.harga_promo;
                 const barcodeBaru = data.barcode || data.code_barcode_baru || item.code;
-                const qty = 1; // tampilkan 1 PCS seperti permintaan
+                const qty = 1; // tampilkan 1 PCS seperti permintaan untuk non-timbangan
                 const uomsales = data.uomsales || 'PCS';
+
+                const isWeighable =
+                  typeof uomsales === 'string' &&
+                  uomsales.toUpperCase().includes('KG') &&
+                  data.ukuran !== undefined &&
+                  data.ukuran !== null;
+
+                const qtyWeigh = isWeighable ? Number(data.ukuran) : null;
+                const pricePerUnit = Number(retailPrice) || 0;
+                const totalBefore = isWeighable
+                  ? Number(data.harga) || (qtyWeigh !== null ? pricePerUnit * qtyWeigh : pricePerUnit)
+                  : pricePerUnit;
+                const totalAfter = Number(discountPrice) || totalBefore;
 
                 return (
                   <View style={styles.itemCard}>
@@ -70,47 +84,66 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
                           {name}
                         </Text>
                         <View style={{ marginTop: 4 }}>
-                          <Text style={styles.priceRow}>
-                            <Text style={styles.priceLabel}>Harga: </Text>
-                            <Text style={styles.priceOld}>{formatCurrency(retailPrice)}</Text>
-                          </Text>
-                          <Text style={styles.priceRow}>
-                            <Text style={styles.priceLabel}>Diskon: </Text>
-                            <Text style={styles.priceNew}>{formatCurrency(discountPrice)}</Text>
-                          </Text>
+                          {isWeighable ? (
+                            <>
+                              <Text style={styles.priceRow}>
+                                <Text style={styles.priceLabel}>Harga/kg: </Text>
+                                <Text style={styles.pricePlain}>{formatCurrency(pricePerUnit)}</Text>
+                              </Text>
+                              <Text style={styles.priceRow}>
+                                <Text style={styles.priceLabel}>Qty: </Text>
+                                <Text style={styles.priceRow}>
+                                  {qtyWeigh !== null
+                                    ? `${qtyWeigh.toLocaleString('id-ID')} KG`
+                                    : `- ${uomsales}`}
+                                </Text>
+                              </Text>
+                              <Text style={styles.priceRow}>
+                                <Text style={styles.priceLabel}>Total: </Text>
+                                <Text style={styles.priceOld}>{formatCurrency(totalBefore)}</Text>
+                              </Text>
+                              <Text style={styles.priceRow}>
+                                <Text style={styles.priceLabel}>Diskon: </Text>
+                                <Text style={styles.priceNew}>{formatCurrency(totalAfter)}</Text>
+                              </Text>
+                            </>
+                          ) : (
+                            <>
+                              <Text style={styles.priceRow}>
+                                <Text style={styles.priceLabel}>Harga: </Text>
+                                <Text style={styles.priceOld}>{formatCurrency(retailPrice)}</Text>
+                              </Text>
+                              <Text style={styles.priceRow}>
+                                <Text style={styles.priceLabel}>Diskon: </Text>
+                                <Text style={styles.priceNew}>{formatCurrency(discountPrice)}</Text>
+                              </Text>
+                            </>
+                          )}
                         </View>
                         <Text style={styles.itemMeta}>Barcode: {barcodeBaru}</Text>
-                        <Text style={styles.itemMeta}>
-                          Qty: {qty} {uomsales}
-                        </Text>
+                        {!isWeighable && (
+                          <Text style={styles.itemMeta}>
+                            Qty: {qty} {uomsales}
+                          </Text>
+                        )}
                       </View>
 
                       {/* KANAN: BARCODE + AKSI (masih dalam satu card utama) */}
                       <View style={styles.itemRight}>
                         <View style={styles.barcodeBox}>
                           <Text style={styles.barcodeTitle}>BARCODE</Text>
-                          {/* Representasi sederhana Code128 */}
-                          <View style={styles.barcodeLines}>
-                            <View style={styles.barLine} />
-                            <View style={styles.barLineThin} />
-                            <View style={styles.barLine} />
-                            <View style={styles.barLineThin} />
-                            <View style={styles.barLine} />
-                            <View style={styles.barLineThin} />
-                            <View style={styles.barLine} />
-                            <View style={styles.barLineThin} />
-                            <View style={styles.barLine} />
-                            <View style={styles.barLineThin} />
-                            <View style={styles.barLine} />
-                            <View style={styles.barLineThin} />
-                          </View>
+                          <Code128Preview value={barcodeBaru} />
                         </View>
                         <Text style={styles.barcodeText} numberOfLines={1}>
                           {barcodeBaru}
                         </Text>
                         <View style={styles.barcodePriceRow}>
-                          <Text style={styles.priceOldSmall}>{formatCurrency(retailPrice)}</Text>
-                          <Text style={styles.priceNewSmall}>{formatCurrency(discountPrice)}</Text>
+                          <Text style={styles.priceOldSmall}>
+                            {formatCurrency(isWeighable ? totalBefore : retailPrice)}
+                          </Text>
+                          <Text style={styles.priceNewSmall}>
+                            {formatCurrency(isWeighable ? totalAfter : discountPrice)}
+                          </Text>
                         </View>
 
                         <View style={styles.itemActionsRow}>
@@ -160,6 +193,14 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
                             style={[styles.actionButton, styles.actionButtonPrimary]}
                             activeOpacity={0.8}
                             onPress={() => {
+                              if (!config) {
+                                Alert.alert(
+                                  'Config belum di-set',
+                                  'Silakan setup discount terlebih dahulu sebelum print.',
+                                );
+                                return;
+                              }
+
                               const raw: any = item.data || {};
                               const data =
                                 Array.isArray(raw.results) && raw.results.length > 0
@@ -177,35 +218,138 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
                               const qty = 1;
                               const uomsales = data.uomsales || 'PCS';
 
+                              const isWeighable =
+                                typeof uomsales === 'string' &&
+                                uomsales.toUpperCase().includes('KG') &&
+                                data.ukuran !== undefined &&
+                                data.ukuran !== null;
+
+                              const qtyWeigh = isWeighable ? Number(data.ukuran) : null;
+                              const pricePerUnit = Number(retailPrice) || 0;
+                              const totalBefore = isWeighable
+                                ? Number(data.harga) ||
+                                  (qtyWeigh !== null ? pricePerUnit * qtyWeigh : pricePerUnit)
+                                : pricePerUnit;
+                              const totalAfter = Number(discountPrice) || totalBefore;
+
+                              const discountPercent = Number(config.discountPercent || '0');
+                              const description = config.description || '';
+                              const outletNumber = Number(config.outlet || '0');
+
+                              const discountPayload: discountService.CreateDiscountPayload = {
+                                internal: String(internal),
+                                name_product: String(name),
+                                code_barcode_lama: String(item.code),
+                                code_barcode_baru: String(barcodeBaru),
+                                retail_price: pricePerUnit,
+                                harga_awal: isWeighable ? totalBefore : pricePerUnit,
+                                discount: discountPercent,
+                                qty: isWeighable && qtyWeigh !== null ? qtyWeigh : qty,
+                                uomsales: isWeighable ? 'KG' : String(uomsales || 'PCS'),
+                                harga_discount: isWeighable
+                                  ? totalAfter
+                                  : Number(discountPrice) || 0,
+                                description,
+                                outlet: outletNumber,
+                              };
+
+                              const unitLabel = isWeighable
+                                ? `${(qtyWeigh ?? 0).toLocaleString('id-ID')} KG`
+                                : `${qty} ${uomsales}`;
+
                               const label = {
                                 productName: name,
                                 internalCode: internal,
                                 barcode: barcodeBaru,
-                                unitLabel: `${qty} ${uomsales}`,
-                                normalPrice: Number(retailPrice) || 0,
-                                discountPrice: Number(discountPrice) || 0,
+                                unitLabel,
+                                normalPrice: isWeighable ? totalBefore : Number(retailPrice) || 0,
+                                discountPrice: isWeighable
+                                  ? totalAfter
+                                  : Number(discountPrice) || 0,
                               };
 
-                              console.log('[Discount] Print label for item', {
+                              console.log('[Discount] Request print label for item', {
                                 id: item.id,
                                 code: item.code,
                                 label,
                               });
 
-                              printDiscountLabel(label, defaultPrinterSettings)
-                                .then(() => {
-                                  Alert.alert(
-                                    'Print',
-                                    'Label diskon berhasil disiapkan untuk dicetak.',
-                                  );
-                                })
-                                .catch(e => {
-                                  console.log('[Printer] Gagal menyiapkan label diskon', e);
-                                  Alert.alert(
-                                    'Gagal print',
-                                    'Terjadi kesalahan saat menyiapkan label untuk printer.',
-                                  );
-                                });
+                              Alert.alert(
+                                'Print label',
+                                `Yakin ingin mencetak label untuk kode ${item.code}?`,
+                                [
+                                  {
+                                    text: 'Batal',
+                                    style: 'cancel',
+                                    onPress: () => {
+                                      console.log(
+                                        '[Discount] Cancel print label for item',
+                                        {
+                                          id: item.id,
+                                          code: item.code,
+                                        },
+                                      );
+                                    },
+                                  },
+                                  {
+                                    text: 'Print',
+                                    style: 'default',
+                                    onPress: () => {
+                                      console.log('[Discount] Confirm print label for item', {
+                                        id: item.id,
+                                        code: item.code,
+                                      });
+
+                                      (async () => {
+                                        try {
+                                          console.log(
+                                            '[Discount] Sending createDiscount payload',
+                                            discountPayload,
+                                          );
+                                          await discountService.createDiscount(discountPayload);
+                                        } catch (e: any) {
+                                          const responseData = e?.response?.data;
+                                          console.log(
+                                            '[Discount] Failed to create discount before print',
+                                            {
+                                              error: String(e?.message || e),
+                                              status: e?.response?.status,
+                                              data: responseData,
+                                            },
+                                          );
+
+                                          const backendMessage =
+                                            responseData?.message ||
+                                            responseData?.error ||
+                                            responseData?.detail;
+
+                                          Alert.alert(
+                                            'Gagal simpan',
+                                            backendMessage ||
+                                              'Terjadi kesalahan saat menyimpan data discount ke server.',
+                                          );
+                                          return;
+                                        }
+
+                                        printDiscountLabel(
+                                          label,
+                                          defaultPrinterSettings,
+                                        ).catch(e => {
+                                          console.log(
+                                            '[Printer] Gagal menyiapkan label diskon',
+                                            e,
+                                          );
+                                          Alert.alert(
+                                            'Gagal print',
+                                            'Terjadi kesalahan saat menyiapkan label untuk printer.',
+                                          );
+                                        });
+                                      })();
+                                    },
+                                  },
+                                ],
+                                { cancelable: true },
+                              );
                             }}>
                             <Text style={styles.actionButtonTextPrimary}>Print</Text>
                           </TouchableOpacity>
@@ -221,9 +365,8 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
 
       </View>
 
-      {items.length > 1 && (
-        <View style={styles.printAllBiteWrapper}>
-          {/* Pill biru penuh */}
+      <View style={styles.bottomActionsRow}>
+        {items.length > 1 && (
           <TouchableOpacity
             style={styles.printAllButton}
             activeOpacity={0.9}
@@ -233,22 +376,20 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
             }}>
             <Text style={styles.printAllText}>Print All</Text>
           </TouchableOpacity>
+        )}
 
-          {/* Lingkaran warna background yang menggigit sisi kanan pill dengan FAB di dalamnya */}
-          <View style={styles.printAllBiteCircle}>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={styles.fabButton}
-              onPress={() => setMenuOpen(prev => !prev)}>
-              <Text style={styles.fabLabel}>+</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.fabContainer}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.fabButton}
+            onPress={() => setMenuOpen(prev => !prev)}>
+            <Text style={styles.fabLabel}>{menuOpen ? '×' : '+'}</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
 
       {menuOpen && (
         <View style={styles.dialOverlay}>
-          {/* Tap di area kosong akan menutup menu */}
           <TouchableWithoutFeedback onPress={() => setMenuOpen(false)}>
             <View style={StyleSheet.absoluteFillObject} />
           </TouchableWithoutFeedback>
@@ -256,77 +397,71 @@ export function DiscountMenuScreen({ onOpenPrinter, onOpenConfig, onOpenScan }: 
           <View style={styles.dialContainer}>
             <TouchableOpacity
               style={styles.dialItemRow}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
               onPress={() => {
-                console.log('[Discount] Open printer setup from speed-dial');
-                onOpenPrinter();
+                console.log('[Discount] Open discount setup from speed-dial');
+                setMenuOpen(false);
+                onOpenConfig();
               }}>
-            <View style={styles.dialLabelChip}>
-              <Text style={styles.dialLabelText}>Setup printer</Text>
-            </View>
-            <View style={styles.dialIconCircle}>
-              <Icon name="printer" size={20} color="#2563eb" />
-            </View>
+              <View style={styles.dialPill}>
+                <Icon name="discount" size={18} color="#ffffff" />
+                <Text style={styles.dialLabel}>Setup discount</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.dialItemRow}
-              activeOpacity={0.85}
-              onPress={() => {
-                console.log('[Discount] Open discount setup from speed-dial');
-                onOpenConfig();
-              }}>
-            <View style={styles.dialLabelChip}>
-              <Text style={styles.dialLabelText}>Setup discount</Text>
-            </View>
-            <View style={styles.dialIconCircle}>
-              <Icon name="discount" size={20} color="#2563eb" />
-            </View>
-          </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.dialItemRow}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
               onPress={() => {
                 console.log('[Discount] Open scan product from speed-dial');
+                setMenuOpen(false);
                 onOpenScan();
               }}>
-            <View style={styles.dialLabelChip}>
-              <Text style={styles.dialLabelText}>Scan product</Text>
-            </View>
-            <View style={styles.dialIconCircle}>
-              <Icon name="scan" size={20} color="#2563eb" />
-            </View>
+              <View style={styles.dialPill}>
+                <Icon name="scan" size={18} color="#ffffff" />
+                <Text style={styles.dialLabel}>Scan product</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
       )}
-
-      <View style={styles.fabContainer}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={styles.fabButton}
-          onPress={() => setMenuOpen(prev => !prev)}>
-          <Text style={styles.fabLabel}>{menuOpen ? '×' : '+'}</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
 
-interface MenuItemProps {
-  icon: string;
-  label: string;
-  onPress: () => void;
+interface Code128PreviewProps {
+  value: string;
 }
 
-function MenuItem({ icon, label, onPress }: MenuItemProps) {
-  return (
-    <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={onPress}>
-      <Icon name={icon} size={28} color="#2563eb" />
-      <Text style={styles.menuItemLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
+function Code128Preview({ value }: Code128PreviewProps) {
+  const safe = (value || '').trim();
+  if (!safe) {
+    return <View style={styles.barcodeLines} />;
+  }
+  const modules = encodeCode128BToModules(safe);
+  if (!modules.length) {
+    return <View style={styles.barcodeLines} />;
+  }
+
+  const moduleUnit = 1.0;
+  const barViews: React.ReactElement[] = [];
+  let elemKey = 0;
+
+  let isBar = true;
+  modules.forEach(m => {
+    const width = m * moduleUnit;
+    if (isBar) {
+      barViews.push(
+        <View key={elemKey} style={[styles.barLine, { width }]} />,
+      );
+    } else {
+      barViews.push(<View key={elemKey} style={{ width }} />);
+    }
+    elemKey += 1;
+    isBar = !isBar;
+  });
+
+  return <View style={styles.barcodeLines}>{barViews}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -367,7 +502,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   listContent: {
-    paddingBottom: 24,
+    // small bottom padding so last card is visually close to Print All / FAB
+    paddingBottom: 32,
     flexGrow: 1,
   },
   itemCard: {
@@ -386,7 +522,7 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    alignItems: 'flex-start',
   },
   itemCode: {
     fontSize: 11,
@@ -404,7 +540,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   itemRight: {
-    width: 150,
+    flex: 1,
     alignItems: 'center',
   },
   itemName: {
@@ -427,6 +563,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#dc2626',
     fontWeight: '600',
+  },
+  pricePlain: {
+    fontSize: 11,
+    color: colors.textPrimary,
   },
   priceRow: {
     fontSize: 11,
@@ -457,12 +597,12 @@ const styles = StyleSheet.create({
   barcodeLines: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    overflow: 'hidden',
     marginBottom: 2,
   },
   barLine: {
-    width: 5,
     height: 26,
     backgroundColor: '#111827',
     marginHorizontal: 1,
@@ -527,53 +667,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
   },
-  dialOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-  },
-  dialContainer: {
-    position: 'absolute',
-    right: 5,
-    bottom: 80,
-    alignItems: 'flex-end',
-  },
-  dialItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginBottom: 12,
-  },
-  dialLabelChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  dialLabelText: {
-    fontSize: 12,
-    color: colors.textPrimary,
-  },
-  dialIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#2563eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dialIconText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
   // Style cadangan untuk MenuItem grid (saat ini tidak digunakan di speed-dial,
   // tapi tetap disediakan karena komponen MenuItem mereferensikan style ini).
   menuItem: {
@@ -588,48 +681,69 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.textPrimary,
   },
-  printAllBiteWrapper: {
+  bottomActionsRow: {
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 20,
-    height: 56,
-    justifyContent: 'center',
+    bottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   printAllButton: {
-    height: 44,
-    borderRadius: 999,
+    flex: 1,
+    marginRight: 12,
+    borderRadius: 8,
     backgroundColor: '#2563eb',
-    paddingLeft: 24,
-    paddingRight: 64, // ruang di sisi kanan untuk lingkaran +
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   printAllText: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  dialOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+  },
+  dialContainer: {
+    position: 'absolute',
+    right: 16,
+    bottom: 96,
+    alignItems: 'flex-end',
+  },
+  dialItemRow: {
+    marginBottom: 10,
+  },
+  dialPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: '#2563eb',
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  dialLabel: {
+    marginLeft: 8,
+    fontSize: 12,
     fontWeight: '600',
     color: '#ffffff',
   },
   fabContainer: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-  },
-  printAllBiteCircle: {
-    position: 'absolute',
-    right: 12,
-    top: 0,
-    bottom: 0,
-    width: 64,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 32,
-    backgroundColor: colors.surface,
+    // sits on the right of bottomActionsRow
   },
   fabButton: {
     width: 56,
@@ -639,8 +753,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
   },

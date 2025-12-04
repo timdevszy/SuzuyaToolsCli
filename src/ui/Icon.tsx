@@ -254,6 +254,33 @@ export function Icon({ name, size = 20, color = '#000' }: IconProps) {
     );
   }
 
+  if (name === 'settings') {
+    return (
+      <View style={circleStyle}>
+        {/* roda gear sederhana */}
+        <View
+          style={{
+            width: dimension * 0.5,
+            height: dimension * 0.5,
+            borderRadius: (dimension * 0.5) / 2,
+            borderWidth: 2,
+            borderColor: '#ffffff',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          <View
+            style={{
+              width: dimension * 0.2,
+              height: dimension * 0.2,
+              borderRadius: (dimension * 0.2) / 2,
+              backgroundColor: '#ffffff',
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
+
   if (name === 'profile') {
     return (
       <View style={circleStyle}>

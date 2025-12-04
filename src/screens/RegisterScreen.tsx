@@ -13,6 +13,7 @@ import {
   Platform,
   StatusBar,
   TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
@@ -116,6 +117,7 @@ export function RegisterScreen({ onRegisterSuccess, onNavigateLogin }: Props) {
   };
 
   const openPicker = (type: 'jabatan' | 'outlet' | 'brand') => {
+    Keyboard.dismiss();
     setSearchQuery('');
     setPickerType(type);
   };

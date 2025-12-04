@@ -47,6 +47,7 @@ export async function createDiscount(payload: CreateDiscountPayload) {
   const res = await toolsApiClient.post('/newdiscount', {
     ...payload,
     device_id,
+    uuid: device_id,
   });
 
   return res.data;

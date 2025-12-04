@@ -82,7 +82,10 @@ export function prepareDiscountPrintJob(
   label: DiscountLabelData,
   settings: PrinterSettings = defaultPrinterSettings,
 ): PreparedDiscountPrintJob {
-  const barcodeEncoding = encodeCode128(label.barcode, 'C');
+  // Biarkan util memilih set (B/C) otomatis berdasarkan isi barcode.
+  // Jika semua digit dan panjang memadai, ia akan pakai set C, kalau ada huruf (mis. "A...", "B...")
+  // ia akan tetap aman di set B.
+  const barcodeEncoding = encodeCode128(label.barcode);
 
   // Untuk debugging sekarang kita hanya log struktur yang akan dipakai.
   // Nanti di integrasi sebenarnya, fungsi ini bisa dipakai sebagai input

@@ -205,14 +205,14 @@ export async function printSimpleTestLabel(): Promise<void> {
 
   await BluetoothEscposPrinter.printerInit();
   await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
-  const textTop = 'Rp 10.500';
+  const textTop = 'TEST PRINT';
 
   // eslint-disable-next-line no-console
   console.log('[Printer] Test1 simple text', {
     top: textTop,
   });
 
-  // Cetak satu baris harga sederhana untuk test
+  // Cetak satu baris teks sederhana untuk test (tanpa informasi harga)
   await BluetoothEscposPrinter.printText(`${textTop}\n\n`, {
     encoding: 'UTF-8',
     codepage: 0,
@@ -288,15 +288,13 @@ export async function printDiscountLabelOnClassicPrinter(
     }
   }
 
-  // Cetak kode barcode tepat di bawah gambar barcode
-  await BluetoothEscposPrinter.printText(`${label.barcode}\n`, baseTextOpts);
-
   await BluetoothEscposPrinter.printText(
     `Harga : Rp ${normalStr} Rp. ${discountStr}\n`,
     baseTextOpts,
   );
 
   // Feed cukup panjang supaya label berikutnya mulai di bawah baris Harga,
-  // sehingga Harga selalu menjadi bagian paling bawah dari satu label.
-  await BluetoothEscposPrinter.printAndFeed(25);
+  // sehingga Harga selalu menjadi bagian paling bawah dari satu label,
+  // tetapi tidak terlalu jauh agar posisi Harga tidak terlalu turun.
+  await BluetoothEscposPrinter.printAndFeed(80);
 }

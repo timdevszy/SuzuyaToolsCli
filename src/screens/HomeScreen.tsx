@@ -17,16 +17,17 @@ import { DiscountConfigScreen } from './DiscountConfigScreen';
 import { DiscountScanScreen } from './DiscountScanScreen';
 import { DiscountMenuScreen } from './DiscountMenuScreen';
 import { ProductSearchScreen } from './ProductSearchScreen';
+import { SettingsScreen } from './SettingsScreen';
 import { colors } from '../ui/theme';
 import { BottomNavBar } from '../ui/BottomNavBar';
 import { Icon } from '../ui/Icon';
 import { CurvedHeader } from '../ui/CurvedHeader';
 import { DiscountProvider } from '../hooks/useDiscount';
 
-type HomeScreenView = 'home' | 'printer' | 'config' | 'scan' | 'discount' | 'profile';
+type HomeScreenView = 'home' | 'printer' | 'config' | 'scan' | 'discount' | 'settings';
 
 export function HomeScreen() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [view, setView] = useState<HomeScreenView>('home');
   const [scanModalVisible, setScanModalVisible] = useState(false);
 
@@ -35,7 +36,7 @@ export function HomeScreen() {
     if (view === 'printer') return 'Setup Printer';
     if (view === 'config') return 'Setup Discount';
     if (view === 'scan') return 'Scan Product';
-    if (view === 'profile') return 'Profile';
+    if (view === 'settings') return 'Settings';
     return '';
   };
 
@@ -44,7 +45,7 @@ export function HomeScreen() {
       setView('home');
     } else if (view === 'printer' || view === 'config' || view === 'scan') {
       setView('discount');
-    } else if (view === 'profile') {
+    } else if (view === 'settings') {
       setView('home');
     }
   };
@@ -66,7 +67,7 @@ export function HomeScreen() {
         setView('discount');
         return true;
       }
-      if (view === 'profile') {
+      if (view === 'settings') {
         setView('home');
         return true;
       }
@@ -172,14 +173,13 @@ export function HomeScreen() {
             <DiscountProvider>
               {view === 'discount' && (
                 <DiscountMenuScreen
-                  onOpenPrinter={() => setView('printer')}
                   onOpenConfig={() => setView('config')}
                   onOpenScan={() => setView('scan')}
                 />
               )}
 
               {view === 'printer' && (
-                <PrinterSetupScreen onDone={() => setView('discount')} />
+                <PrinterSetupScreen onDone={() => setView('settings')} />
               )}
 
               {view === 'config' && (
@@ -189,40 +189,24 @@ export function HomeScreen() {
               {view === 'scan' && <DiscountScanScreen onBack={() => setView('discount')} />}
             </DiscountProvider>
 
-            {view === 'profile' && (
-              <View style={{ flex: 1, paddingTop: 8 }}>
-                <Text style={styles.sectionTitle}>Profil</Text>
-                <Text style={{ marginBottom: 16 }}>
-                  {user?.name} ({getActiveOutletCode()})
-                </Text>
-                <TouchableOpacity
-                  style={{
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    borderRadius: 8,
-                    backgroundColor: '#ef4444',
-                    alignSelf: 'flex-start',
-                  }}
-                  onPress={logout}>
-                  <Text style={{ color: '#fff', fontWeight: '600' }}>Logout</Text>
-                </TouchableOpacity>
-              </View>
+            {view === 'settings' && (
+              <SettingsScreen onNavigateToPrinter={() => setView('printer')} />
             )}
           </View>
         </View>
         <SafeAreaView edges={['bottom']} style={styles.bottomSafeArea}>
           <BottomNavBar
-            activeKey={scanModalVisible ? 'scan' : 'home'}
+            activeKey={scanModalVisible ? 'scan' : view === 'settings' ? 'settings' : 'home'}
             items={[
               { key: 'home', icon: 'home', label: 'Home' },
               { key: 'scan', icon: 'scan', label: 'Scan' },
-              { key: 'profile', icon: 'profile', label: 'Profile' },
+              { key: 'settings', icon: 'settings', label: 'Settings' },
             ]}
             onPress={key => {
               if (key === 'scan') {
                 setScanModalVisible(true);
-              } else if (key === 'profile') {
-                setView('profile');
+              } else if (key === 'settings') {
+                setView('settings');
               } else {
                 setView('home');
               }
@@ -333,6 +317,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
     color: colors.textPrimary,
+  },
+  settingsSectionLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
   appBar: {
     height: 48,

@@ -80,3 +80,7 @@ export async function getOrCreateDeviceIdForUsername(
   await saveDeviceIdMap(map);
   return newId;
 }
+
+export async function getOrCreateDeviceId(): Promise<string> {
+  return getOrCreateDeviceIdForUsername('_global');
+}

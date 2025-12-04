@@ -10,10 +10,10 @@ import {
   NativeSyntheticEvent,
   PermissionsAndroid,
   Platform,
-  useWindowDimensions,
   Alert,
 } from 'react-native';
 import { useDiscount } from '../hooks/useDiscount';
+import { encodeCode128BToModules } from '../services/code128Service';
 import {
   defaultPrinterSettings,
   printDiscountLabel,
@@ -23,7 +23,6 @@ import {
 import {
   scanClassicPrinters,
   connectToClassicPrinter,
-  printSimpleTestLabel,
   type ClassicPrinterDevice,
   getCurrentPrinterAddress,
   getCurrentPrinterInfo,
@@ -51,8 +50,7 @@ export function PrinterSetupScreen({ onDone }: Props) {
   });
   const { setIsPrinterConfigured } = useDiscount();
   const [activeSlide, setActiveSlide] = useState(0);
-  const { width } = useWindowDimensions();
-  const slideWidth = width - 32; // container padding horizontal 16 + 16
+  const [slideWidth, setSlideWidth] = useState(0);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement } = e.nativeEvent;
@@ -292,9 +290,18 @@ export function PrinterSetupScreen({ onDone }: Props) {
                         ],
                         { cancelable: false },
                       );
-                    } catch (e) {
+                    } catch (e: any) {
                       // eslint-disable-next-line no-console
                       console.warn('[ClassicPrinter] Gagal connect ke printer klasik', e);
+
+                      const msg =
+                        (e && (e.message || e.toString?.())) ||
+                        'Tidak dapat menyambungkan ke printer.';
+
+                      Alert.alert(
+                        'Gagal connect printer',
+                        `${msg}\n\nHal ini bisa terjadi jika printer belum dinyalakan, belum dipair di pengaturan Bluetooth, atau sedang terhubung ke perangkat lain. Coba pastikan printer sudah menyala dan terpair di Android, lalu tekan Refresh dan Connect lagi.`,
+                      );
                     }
                   }
                 } else {
@@ -387,67 +394,106 @@ export function PrinterSetupScreen({ onDone }: Props) {
       )}
 
       {/* Section: label previews (slider) */}
-      <View style={styles.labelsSliderWrapper}>
+      <View
+        style={styles.labelsSliderWrapper}
+        onLayout={e => {
+          const w = e.nativeEvent.layout.width;
+          if (w && w > 0 && w !== slideWidth) {
+            setSlideWidth(w);
+          }
+        }}>
         <ScrollView
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          style={{ width: slideWidth }}
+          style={slideWidth > 0 ? { width: slideWidth } : undefined}
           contentContainerStyle={{ alignItems: 'stretch' }}>
           <LabelPreview
-            index={0}
-            title="Print Test 1"
-            slideWidth={slideWidth}
-            onPress={async () => {
-              await printSimpleTestLabel();
-            }}
-          />
-          <LabelPreview
-            index={1}
-            title="Print Test 2"
-            slideWidth={slideWidth}
-            onPress={async () => {
-              const label: DiscountLabelData = {
-                productName: 'VARIAN LAIN DISKON',
-                internalCode: 'B0021777010251',
-                barcode: '1777010251',
-                unitLabel: '1 PCS',
-                normalPrice: 60000,
-                discountPrice: 42000,
-              };
-
-              const settings: PrinterSettings = {
-                ...defaultPrinterSettings,
-                labelWidth: is88mm ? 576 : 384,
-              };
-
-              await printDiscountLabel(label, settings);
-            }}
-          />
-          <LabelPreview
-            index={2}
-            title="Print Test 3"
-            slideWidth={slideWidth}
-            onPress={async () => {
-              const label: DiscountLabelData = {
-                productName: 'PRODUK UJI COBA 3',
-                internalCode: 'C0021777010252',
-                barcode: '1777010252',
-                unitLabel: '1 PCS',
-                normalPrice: 75000,
-                discountPrice: 52500,
-              };
-
-              const settings: PrinterSettings = {
-                ...defaultPrinterSettings,
-                labelWidth: is88mm ? 576 : 384,
-              };
-
-              await printDiscountLabel(label, settings);
-            }}
-          />
+  index={0}
+  title="Print Test 1"
+  slideWidth={slideWidth}
+  label={{
+    productName: 'AQUA AIR MINERAL BOTOL 1.5L',
+    internalCode: '00217770102',
+    barcode: 'A002177701025',
+    unitLabel: '1 PCS',
+    normalPrice: 5700,
+    discountPrice: 5415,
+  }}
+  onPress={async () => {
+    const label: DiscountLabelData = {
+      productName: 'AQUA AIR MINERAL BOTOL 1.5L',
+      internalCode: '00217770102',
+      barcode: 'A002177701025',
+      unitLabel: '1 PCS',
+      normalPrice: 5700,
+      discountPrice: 5415,
+    };
+    const settings: PrinterSettings = {
+      ...defaultPrinterSettings,
+      labelWidth: is88mm ? 576 : 384,
+    };
+    await printDiscountLabel(label, settings);
+  }}
+/>
+<LabelPreview
+  index={1}
+  title="Print Test 2"
+  slideWidth={slideWidth}
+  label={{
+    productName: 'LONGAN GOLD NS',
+    internalCode: '00529810101',
+    barcode: 'B201019425',
+    unitLabel: '1.942 KG',
+    normalPrice: 97100,
+    discountPrice: 92245,
+  }}
+  onPress={async () => {
+    const label: DiscountLabelData = {
+      productName: 'LONGAN GOLD NS',
+      internalCode: '00529810101',
+      barcode: 'B201019425',
+      unitLabel: '1.942 KG',
+      normalPrice: 97100,
+      discountPrice: 92245,
+    };
+    const settings: PrinterSettings = {
+      ...defaultPrinterSettings,
+      labelWidth: is88mm ? 576 : 384,
+    };
+    await printDiscountLabel(label, settings);
+  }}
+/>
+<LabelPreview
+  index={2}
+  title="Print Test 3"
+  slideWidth={slideWidth}
+  label={{
+    productName: 'ANGGUR HITAM MIDNIGHT BEAUTY NS',
+    internalCode: '99058830101',
+    barcode: 'C1112017501',
+    unitLabel: '1,75 KG',
+    normalPrice: 91875,
+    discountPrice: 90956,
+  }}
+  onPress={async () => {
+    const label: DiscountLabelData = {
+      productName: 'ANGGUR HITAM MIDNIGHT BEAUTY NS',
+      internalCode: '99058830101',
+      barcode: 'C1112017501',
+      unitLabel: '1,75 KG',
+      normalPrice: 91875,
+      discountPrice: 90956,
+    };
+    const settings: PrinterSettings = {
+      ...defaultPrinterSettings,
+      labelWidth: is88mm ? 576 : 384,
+    };
+    await printDiscountLabel(label, settings);
+  }}
+/>
         </ScrollView>
         <View style={styles.dotsRow}>
           {[0, 1, 2].map(i => (
@@ -484,28 +530,49 @@ function Checkbox({ checked, label, onToggle }: CheckboxProps) {
 }
 
 interface LabelPreviewProps {
+  label: DiscountLabelData;
   index: number;
   title: string;
   slideWidth: number;
   onPress: () => void;
 }
 
-function LabelPreview({ title, slideWidth, onPress }: LabelPreviewProps) {
-  const code = 'A0021777010250';
-  const oldPrice = '50.000';
-  const newPrice = '35.000';
+function LabelPreview({ title, onPress, label, slideWidth }: LabelPreviewProps) {
+  const normal = label.normalPrice.toLocaleString('id-ID');
+  const disc = label.discountPrice.toLocaleString('id-ID');
+
+  const widthStyle = slideWidth > 0 ? { width: slideWidth } : null;
 
   return (
-    <View style={[styles.labelSlide, { width: slideWidth }] }>
+    <View style={[styles.labelSlide, widthStyle]}>
       <View style={styles.labelCard}>
         <View style={styles.barcodeBox}>
-          <Text style={styles.barcodePlaceholder}>[ CODE128 BARCODE ]</Text>
+          {encodeCode128BToModules(label.barcode).length > 0 ? (
+            <View style={{ flexDirection: 'row', height: '100%' }}>
+              {(() => {
+                const modules = encodeCode128BToModules(label.barcode);
+                let isBar = true;
+                return modules.map((m, idx) => {
+                  const el = (
+                    <View
+                      key={idx}
+                      style={{ flex: m, height: '100%', backgroundColor: isBar ? '#000' : 'transparent' }}
+                    />
+                  );
+                  isBar = !isBar;
+                  return el;
+                });
+              })()}
+            </View>
+          ) : (
+            <Text style={styles.barcodePlaceholder}>[ CODE128 BARCODE ]</Text>
+          )}
         </View>
-        <Text style={styles.labelCode}>{code}</Text>
+        <Text style={styles.labelCode}>{label.barcode}</Text>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Harga:</Text>
-          <Text style={styles.oldPrice}>Rp {oldPrice}</Text>
-          <Text style={styles.newPrice}>Rp {newPrice}</Text>
+          <Text style={styles.oldPrice}>Rp {normal}</Text>
+          <Text style={styles.newPrice}>Rp {disc}</Text>
         </View>
         <View style={styles.labelFooterRow}>
           <TouchableOpacity style={styles.secondaryButton} onPress={onPress}>
@@ -668,22 +735,29 @@ const styles = StyleSheet.create({
   labelCard: {
     alignSelf: 'stretch',
     width: '100%',
-    maxWidth: undefined as any,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    maxWidth: 420,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     borderRadius: 16,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   barcodeBox: {
-    height: 56,
-    borderRadius: 8,
+    height: 64,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#d1d5db',
+    alignSelf: 'stretch',
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   barcodePlaceholder: {
     fontSize: 11,
@@ -699,12 +773,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    marginTop: 4,
   },
   priceLabel: {
     fontSize: 13,
     color: '#374151',
     marginRight: 4,
+  },
+  hargaLine: {
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 4,
   },
   labelFooterRow: {
     flexDirection: 'row',

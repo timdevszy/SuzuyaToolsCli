@@ -47,6 +47,16 @@ function useDiscountInternal() {
           outlet: config.outlet,
           discount: config.discountPercent,
         });
+        // Normalisasi bentuk respons: beberapa API mengembalikan { results: [detail] }
+        const raw: any = result || {};
+        const hasResults = Array.isArray(raw.results) ? raw.results.length > 0 : !!raw.internal;
+
+        if (!hasResults) {
+          const msg = 'Produk tidak ditemukan.';
+          setError(msg);
+          throw new Error(msg);
+        }
+
         const id = `${code}-${Date.now()}`;
         setItems(prev => [{ id, code, data: result }, ...prev]);
       } catch (e: any) {
