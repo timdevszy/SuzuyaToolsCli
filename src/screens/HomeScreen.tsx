@@ -22,14 +22,24 @@ import { colors } from '../ui/theme';
 import { BottomNavBar } from '../ui/BottomNavBar';
 import { Icon } from '../ui/Icon';
 import { CurvedHeader } from '../ui/CurvedHeader';
-import { DiscountProvider } from '../hooks/useDiscount';
+import { DiscountProvider, useDiscount } from '../hooks/useDiscount';
 
 type HomeScreenView = 'home' | 'printer' | 'config' | 'scan' | 'discount' | 'settings';
 
 export function HomeScreen() {
+  return (
+    <DiscountProvider>
+      <HomeScreenInner />
+    </DiscountProvider>
+  );
+}
+
+function HomeScreenInner() {
   const { user } = useAuth();
+  const { config, isPrinterConfigured } = useDiscount();
   const [view, setView] = useState<HomeScreenView>('home');
-  const [scanModalVisible, setScanModalVisible] = useState(false);
+  const [discountScanModalVisible, setDiscountScanModalVisible] = useState(false);
+  const [comingFromDiscountToPrinter, setComingFromDiscountToPrinter] = useState(false);
 
   const getTitleForView = () => {
     if (view === 'discount') return 'Discount';
@@ -52,9 +62,9 @@ export function HomeScreen() {
 
   useEffect(() => {
     const onHardwareBackPress = () => {
-      // Jika sedang di modal scan, tutup dulu modalnya
-      if (scanModalVisible) {
-        setScanModalVisible(false);
+      // Jika sedang di modal scan discount, tutup dulu modalnya
+      if (discountScanModalVisible) {
+        setDiscountScanModalVisible(false);
         return true;
       }
 
@@ -78,7 +88,7 @@ export function HomeScreen() {
 
     const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBackPress);
     return () => sub.remove();
-  }, [view, scanModalVisible]);
+  }, [view, discountScanModalVisible]);
 
   const getActiveOutletCode = () => {
     if (!user) return '';
@@ -119,19 +129,8 @@ export function HomeScreen() {
               <Text style={styles.appBarTitle}>{getTitleForView()}</Text>
             </View>
 
-            {/* Right: default_outlet badge (non-clickable) */}
-            <View style={styles.appBarBadge}>
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: '#22c55e',
-                  marginRight: 6,
-                }}
-              />
-              <Text style={styles.appBarBadgeText}>{getActiveOutletCode()}</Text>
-            </View>
+            {/* Right: spacer (badge outlet hanya tampil di header Home/CurvedHeader) */}
+            <View style={styles.appBarBack} />
           </View>
         )}
       </SafeAreaView>
@@ -145,7 +144,7 @@ export function HomeScreen() {
             ]}>
             {view === 'home' && (
               <View style={styles.menuGrid}>
-                {[
+                {[ 
                   { key: 'stockInfo', label: 'Stock Info', icon: 'stock' },
                   { key: 'discount', label: 'Discount', icon: 'discount' },
                   { key: 'monitoring', label: 'Monitoring', icon: 'monitor' },
@@ -158,7 +157,31 @@ export function HomeScreen() {
                     activeOpacity={0.8}
                     onPress={() => {
                       if (item.key === 'discount') {
-                        setView('discount');
+                        if (!isPrinterConfigured) {
+                          // Wajib setup printer dulu sebelum masuk menu Discount
+                          Alert.alert(
+                            'Setup printer dulu',
+                            'Sebelum menggunakan menu Discount, silakan setup printer terlebih dahulu.',
+                            [
+                              { text: 'Batal', style: 'cancel' },
+                              {
+                                text: 'OK',
+                                onPress: () => {
+                                  setComingFromDiscountToPrinter(true);
+                                  setView('printer');
+                                },
+                              },
+                            ],
+                            { cancelable: false },
+                          );
+                          return;
+                        }
+
+                        if (config) {
+                          setView('discount');
+                        } else {
+                          setView('config');
+                        }
                       } else {
                         Alert.alert(item.label, 'Fitur ini belum diimplementasikan.');
                       }
@@ -170,24 +193,42 @@ export function HomeScreen() {
               </View>
             )}
 
-            <DiscountProvider>
-              {view === 'discount' && (
-                <DiscountMenuScreen
-                  onOpenConfig={() => setView('config')}
-                  onOpenScan={() => setView('scan')}
-                />
-              )}
+            {view === 'discount' && (
+              <DiscountMenuScreen
+                onOpenConfig={() => setView('config')}
+                onOpenScan={() => setDiscountScanModalVisible(true)}
+              />
+            )}
 
-              {view === 'printer' && (
-                <PrinterSetupScreen onDone={() => setView('settings')} />
-              )}
+            {view === 'printer' && (
+              <PrinterSetupScreen
+                onDone={() => {
+                  if (comingFromDiscountToPrinter) {
+                    // Setelah selesai setup printer dari flow Discount,
+                    // lanjutkan ke menu Discount.
+                    setComingFromDiscountToPrinter(false);
+                    if (config) {
+                      setView('discount');
+                    } else {
+                      setView('config');
+                    }
+                  } else {
+                    // Flow biasa dari Settings: kembali ke Settings.
+                    setView('settings');
+                  }
+                }}
+              />
+            )}
 
-              {view === 'config' && (
-                <DiscountConfigScreen onDone={() => setView('discount')} />
-              )}
-
-              {view === 'scan' && <DiscountScanScreen onBack={() => setView('discount')} />}
-            </DiscountProvider>
+            {view === 'config' && (
+              <DiscountConfigScreen
+                onDone={() => {
+                  setView('discount');
+                  setDiscountScanModalVisible(true);
+                }}
+                onCancel={() => setView('discount')}
+              />
+            )}
 
             {view === 'settings' && (
               <SettingsScreen onNavigateToPrinter={() => setView('printer')} />
@@ -196,7 +237,7 @@ export function HomeScreen() {
         </View>
         <SafeAreaView edges={['bottom']} style={styles.bottomSafeArea}>
           <BottomNavBar
-            activeKey={scanModalVisible ? 'scan' : view === 'settings' ? 'settings' : 'home'}
+            activeKey={view === 'settings' || view === 'printer' ? 'settings' : 'home'}
             items={[
               { key: 'home', icon: 'home', label: 'Home' },
               { key: 'scan', icon: 'scan', label: 'Scan' },
@@ -204,7 +245,7 @@ export function HomeScreen() {
             ]}
             onPress={key => {
               if (key === 'scan') {
-                setScanModalVisible(true);
+                Alert.alert('Scan', 'Fitur ini belum diimplementasikan.');
               } else if (key === 'settings') {
                 setView('settings');
               } else {
@@ -216,15 +257,15 @@ export function HomeScreen() {
       </View>
 
       <Modal
-        visible={scanModalVisible}
+        visible={discountScanModalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setScanModalVisible(false)}>
-        <TouchableWithoutFeedback onPress={() => setScanModalVisible(false)}>
+        onRequestClose={() => setDiscountScanModalVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setDiscountScanModalVisible(false)}>
           <View style={styles.scanModalBackdrop}>
             <TouchableWithoutFeedback>
               <View style={styles.scanModalContainer}>
-                <ProductSearchScreen onBack={() => setScanModalVisible(false)} />
+                <DiscountScanScreen onBack={() => setDiscountScanModalVisible(false)} />
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -284,15 +325,25 @@ const styles = StyleSheet.create({
   scanModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(248, 250, 252, 0.9)',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 0,
   },
   scanModalContainer: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 8,
   },
   menuGrid: {
     flexDirection: 'row',

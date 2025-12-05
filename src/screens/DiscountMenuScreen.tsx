@@ -22,11 +22,78 @@ function formatCurrency(value: number | string | undefined) {
 
 export function DiscountMenuScreen({ onOpenConfig, onOpenScan }: DiscountMenuScreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [bannerMenuOpen, setBannerMenuOpen] = useState(false);
   const { items, removeItem, config } = useDiscount();
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.body}>
+        {config && (
+          <View style={styles.configBanner}>
+            <View style={styles.configBannerHeaderRow}>
+              <Text style={styles.configBannerTitle}>Setup discount aktif</Text>
+
+              {/* Aksi kanan sebagai dropdown sederhana */}
+              <View style={styles.configBannerIconRow}>
+                <TouchableOpacity
+                  style={styles.configIconButton}
+                  activeOpacity={0.8}
+                  onPress={() => setBannerMenuOpen(v => !v)}>
+                  <Text style={styles.configIconButtonText}>Aksi ▾</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.configInfoRowCompact}>
+              <View style={styles.configFieldRow}>
+                <Text style={styles.configFieldLabel}>Outlet:</Text>
+                <View style={styles.configBadge}>
+                  <View style={styles.configBadgeDot} />
+                  <Text style={styles.configBadgeText}>{config.outlet}</Text>
+                </View>
+              </View>
+
+              {config.discountPercent ? (
+                <View style={[styles.configFieldRow, styles.configFieldGap]}>
+                  <Text style={styles.configFieldLabel}>Diskon:</Text>
+                  <View style={styles.configBadge}>
+                    <View style={styles.configBadgeDot} />
+                    <Text style={styles.configBadgeText}>{`${config.discountPercent}%`}</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+
+            {bannerMenuOpen && (
+              <View style={styles.bannerMenuLocalOverlay}>
+                <TouchableWithoutFeedback onPress={() => setBannerMenuOpen(false)}>
+                  <View style={StyleSheet.absoluteFillObject} />
+                </TouchableWithoutFeedback>
+                <View style={styles.bannerMenuInCard}>
+                  <TouchableOpacity
+                    style={styles.bannerMenuItem}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setBannerMenuOpen(false);
+                      onOpenConfig();
+                    }}>
+                    <Text style={styles.bannerMenuItemText}>Ubah Discount</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.bannerMenuItem}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setBannerMenuOpen(false);
+                      onOpenScan();
+                    }}>
+                    <Text style={styles.bannerMenuItemText}>Scan Produk</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {items.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.title}>Discount</Text>
@@ -377,15 +444,6 @@ export function DiscountMenuScreen({ onOpenConfig, onOpenScan }: DiscountMenuScr
             <Text style={styles.printAllText}>Print All</Text>
           </TouchableOpacity>
         )}
-
-        <View style={styles.fabContainer}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            style={styles.fabButton}
-            onPress={() => setMenuOpen(prev => !prev)}>
-            <Text style={styles.fabLabel}>{menuOpen ? '×' : '+'}</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {menuOpen && (
@@ -395,20 +453,6 @@ export function DiscountMenuScreen({ onOpenConfig, onOpenScan }: DiscountMenuScr
           </TouchableWithoutFeedback>
 
           <View style={styles.dialContainer}>
-            <TouchableOpacity
-              style={styles.dialItemRow}
-              activeOpacity={0.9}
-              onPress={() => {
-                console.log('[Discount] Open discount setup from speed-dial');
-                setMenuOpen(false);
-                onOpenConfig();
-              }}>
-              <View style={styles.dialPill}>
-                <Icon name="discount" size={18} color="#ffffff" />
-                <Text style={styles.dialLabel}>Setup discount</Text>
-              </View>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.dialItemRow}
               activeOpacity={0.9}
@@ -469,6 +513,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  globalDismissOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
   title: {
     fontSize: 22,
     fontWeight: '600',
@@ -481,18 +529,227 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   body: {
-    flex: 1,
+    flex: 4,
     paddingHorizontal: 16,
     paddingTop: 0,
+    paddingBottom: 16,
     justifyContent: 'flex-start',
   },
-  emptyState: {
+  configBanner: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    marginTop: 0,
+    marginBottom: 12,
+  },
+  configBannerHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  // Baris 2: Outlet & Diskon
+  configInfoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  configRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    flexWrap: 'nowrap',
+    marginTop: 4,
+  },
+  configInlineFields: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  configBannerText: {
+    flex: 1,
+    marginRight: 8,
+  },
+  configInfoColumn: {
+    flex: 1,
+    marginRight: 12,
+  },
+  configBadgeColumn: {
+    marginTop: 6,
+  },
+  configBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    marginTop: 4,
+  },
+  configInfoRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  configFieldRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginTop: 0,
+  },
+  configFieldBelow: {
+    marginTop: 2,
+  },
+  configFieldGap: {
+    marginLeft: 12,
+  },
+  configFieldLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginRight: 6,
+  },
+  configBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#ecfdf3',
+    marginRight: 4,
+    marginTop: 2,
+  },
+  configBadgeGap: {
+    marginLeft: 8,
+  },
+  configBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#22c55e',
+    marginRight: 6,
+  },
+  configBadgeText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: colors.textPrimary,
+  },
+  // Baris 3: tombol aksi
+  configActionsRow: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  configBannerActions: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+  },
+  configBannerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  configBannerSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  configBannerButton: {
+    minWidth: 120,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#2563eb',
+  },
+  configBannerButtonSecondary: {
+    marginTop: 6,
+  },
+  configBannerButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  configBannerIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  configIconButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  configIconButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  bannerMenuOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+  },
+  bannerMenuContainer: {
+    marginTop: 32,
+    marginRight: 4,
+    minWidth: 160,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  bannerMenuInCard: {
+    position: 'absolute',
+    right: 5,
+    top: 1,
+    minWidth: 160,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  bannerMenuLocalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  bannerMenuItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  bannerMenuItemText: {
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
   },
   listSection: {
-    marginTop: -22,
+    marginTop: 0,
     flex: 1,
   },
   listTitle: {
@@ -502,22 +759,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   listContent: {
-    // small bottom padding so last card is visually close to Print All / FAB
-    paddingBottom: 32,
+    // small bottom padding so last card tidak terlalu menempel ke Print All
+    paddingBottom: 80,
     flexGrow: 1,
   },
   itemCard: {
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 10,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     shadowColor: '#000',
     shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
   itemRow: {

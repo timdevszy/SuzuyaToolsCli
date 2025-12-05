@@ -4,9 +4,10 @@ import { useDiscount } from '../hooks/useDiscount';
 
 interface Props {
   onDone?: () => void;
+  onCancel?: () => void;
 }
 
-export function DiscountConfigScreen({ onDone }: Props) {
+export function DiscountConfigScreen({ onDone, onCancel }: Props) {
   const { config, updateConfig, setIsDiscountConfigured } = useDiscount();
   const outlet = config?.outlet ?? '2009';
   const [discountPercent, setDiscountPercent] = useState(
@@ -15,6 +16,13 @@ export function DiscountConfigScreen({ onDone }: Props) {
   const [description, setDescription] = useState(config?.description ?? '');
 
   const handleSave = () => {
+    if (!discountPercent.trim()) {
+      Alert.alert(
+        'Diskon wajib diisi',
+        'Silakan isi persentase diskon / harga spesial sebelum menyimpan.',
+      );
+      return;
+    }
     if (!description.trim()) {
       Alert.alert('Keterangan wajib diisi', 'Silakan isi keterangan untuk setup discount.');
       return;
@@ -67,14 +75,20 @@ export function DiscountConfigScreen({ onDone }: Props) {
           <TouchableOpacity
             style={styles.outlineButton}
             activeOpacity={0.8}
-            onPress={onDone}>
+            onPress={() => {
+              if (onCancel) {
+                onCancel();
+              } else if (onDone) {
+                onDone();
+              }
+            }}>
             <Text style={styles.outlineButtonText}>Batal</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.primaryButton}
             activeOpacity={0.8}
             onPress={handleSave}>
-            <Text style={styles.primaryButtonText}>Simpan</Text>
+            <Text style={styles.primaryButtonText}>Lanjut</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -86,6 +100,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    justifyContent: 'center',
   },
   title: {
     fontSize: 24,

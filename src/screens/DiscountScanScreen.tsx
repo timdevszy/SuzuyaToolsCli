@@ -27,6 +27,7 @@ export function DiscountScanScreen({ onBack }: Props) {
   const [code, setCode] = useState('');
   const [cameraVisible, setCameraVisible] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
 
   const handleScan = async () => {
     if (!code) {
@@ -44,11 +45,7 @@ export function DiscountScanScreen({ onBack }: Props) {
         [
           {
             text: 'OK',
-            onPress: () => {
-              if (onBack) {
-                onBack();
-              }
-            },
+            onPress: () => {},
           },
         ],
         { cancelable: false },
@@ -96,11 +93,7 @@ export function DiscountScanScreen({ onBack }: Props) {
         [
           {
             text: 'OK',
-            onPress: () => {
-              if (onBack) {
-                onBack();
-              }
-            },
+            onPress: () => {},
           },
         ],
         { cancelable: false },
@@ -116,18 +109,31 @@ export function DiscountScanScreen({ onBack }: Props) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.centerBlock}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Scan produk discount</Text>
         {config ? (
-          <Text style={styles.subtitle}>
-            Outlet {config.outlet} · Diskon {config.discountPercent}%
-          </Text>
+          <View style={styles.badgeRow}>
+            <Text style={styles.badgeLabel}>Outlet:</Text>
+            <View style={styles.badgePill}>
+              <View style={styles.badgeDot} />
+              <Text style={styles.badgeText}>{config.outlet}</Text>
+            </View>
+            <Text style={[styles.badgeLabel, { marginLeft: 8 }]}>Diskon:</Text>
+            <View style={styles.badgePill}>
+              <View style={styles.badgeDot} />
+              <Text style={styles.badgeText}>{config.discountPercent}%</Text>
+            </View>
+          </View>
         ) : (
           <Text style={styles.subtitle}>Config discount belum di-set</Text>
         )}
         {error ? <Text style={styles.error}>{error}</Text> : null}
+      </View>
+
+      <View style={styles.centerBlock}>
         <View style={styles.row}>
           <TouchableOpacity
-            style={styles.iconButton}
+            style={[styles.iconButton, styles.cameraButton]}
             activeOpacity={0.8}
             onPress={() => {
               console.log('[Discount] Open camera modal for scan');
@@ -159,27 +165,56 @@ export function DiscountScanScreen({ onBack }: Props) {
           setCameraVisible(false);
         }}>
         <View style={styles.cameraModalRoot}>
-          <Camera
-            style={styles.cameraPreview}
-            cameraType={CameraType.Back}
-            scanBarcode
-            onReadCode={handleBarcodeRead}
-            showFrame
-            frameColor="#22c55e"
-            laserColor="#22c55e"
-            onError={event => {
-              console.log('[Discount] Camera error', event?.nativeEvent || event);
-            }}
-          />
-          <TouchableOpacity
-            style={styles.cameraCloseButton}
-            activeOpacity={0.8}
-            onPress={() => {
-              console.log('[Discount] Close camera modal (button)');
-              setCameraVisible(false);
-            }}>
-            <Text style={styles.cameraCloseText}>Tutup</Text>
-          </TouchableOpacity>
+          <View style={styles.cameraPreviewWrapper}>
+            <Camera
+              style={styles.cameraPreview}
+              cameraType={CameraType.Back}
+              scanBarcode
+              onReadCode={handleBarcodeRead}
+              showFrame
+              frameColor="#22c55e"
+              laserColor="#22c55e"
+              flashMode={flashOn ? ('torch' as any) : ('off' as any)}
+              onError={event => {
+                console.log('[Discount] Camera error', event?.nativeEvent || event);
+              }}
+            />
+
+            {/* Masker: hanya area tengah (jendela) yang terang, luar gelap lembut */}
+            <View pointerEvents="none" style={styles.cameraMask}>
+              <View style={styles.maskTop} />
+              <View style={styles.maskCenterRow}>
+                <View style={styles.maskSide} />
+                <View style={styles.maskHole} />
+                <View style={styles.maskSide} />
+              </View>
+              <View style={styles.maskBottom} />
+            </View>
+          </View>
+
+          <View style={styles.cameraControlsRow}>
+            <TouchableOpacity
+              style={styles.flashButton}
+              activeOpacity={0.8}
+              onPress={() => {
+                const next = !flashOn;
+                console.log('[Discount] Toggle flash', { next });
+                setFlashOn(next);
+              }}>
+              <Icon name="flash" size={18} color="#fbbf24" />
+              <Text style={styles.flashButtonText}>{flashOn ? 'Flash ON' : 'Flash OFF'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cameraCloseButton}
+              activeOpacity={0.8}
+              onPress={() => {
+                console.log('[Discount] Close camera modal (button)');
+                setCameraVisible(false);
+              }}>
+              <Text style={styles.cameraCloseText}>Tutup</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </View>
@@ -188,19 +223,59 @@ export function DiscountScanScreen({ onBack }: Props) {
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#ffffff',
+    width: '100%',
+  },
+  header: {
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 4,
+    color: '#111827',
   },
   centerBlock: {
-    flex: 1,
-    justifyContent: 'center',
+    paddingVertical: 4,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     color: '#6b7280',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  badgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#ecfdf3',
+    marginHorizontal: 4,
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#22c55e',
+    marginRight: 6,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  badgeLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginRight: 4,
   },
   error: {
     color: 'red',
@@ -235,6 +310,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
     backgroundColor: '#ffffff',
   },
+  cameraButton: {
+    borderColor: '#2563eb',
+  },
   searchButton: {
     backgroundColor: '#ffffff',
     borderColor: '#2563eb',
@@ -245,10 +323,59 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: 'center',
   },
+  cameraPreviewWrapper: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
   cameraPreview: {
     flex: 1,
     borderRadius: 16,
     overflow: 'hidden',
+  },
+  cameraMask: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  maskTop: {
+    flex: 1.1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  maskCenterRow: {
+    flexDirection: 'row',
+    height: '21%',
+  },
+  maskSide: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  maskHole: {
+    width: '80%',
+    height: '100%',
+  },
+  maskBottom: {
+    flex: 1.1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  cameraControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  flashButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  flashButtonText: {
+    color: '#fbbf24',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   cameraCloseButton: {
     marginTop: 16,

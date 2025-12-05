@@ -62,7 +62,9 @@ export function PrinterSetupScreen({ onDone }: Props) {
     (async () => {
       const { address, name } = getCurrentPrinterInfo();
       if (address) {
-        setDeviceType('bluetooth');
+        // Jangan paksa deviceType menjadi 'bluetooth' di awal;
+        // cukup simpan info agar UI bisa menampilkan printer terakhir
+        // dan Connect bisa langsung memakai data ini.
         setPrinterName(name || address);
         setSelectedDeviceAddress(prev => prev || address);
         setIsConnected(true);
@@ -72,7 +74,6 @@ export function PrinterSetupScreen({ onDone }: Props) {
 
       const last = await getLastPrinterInfo();
       if (last.address) {
-        setDeviceType('bluetooth');
         setPrinterName(last.name || last.address);
         setSelectedDeviceAddress(prev => prev || last.address);
         setIsConnected(false);
@@ -114,6 +115,8 @@ export function PrinterSetupScreen({ onDone }: Props) {
 
   const primaryButtonLabel =
     deviceType === 'bluetooth' && isConnected ? 'Disconnect' : 'Connect';
+
+  const isDeviceNone = deviceType === 'none';
 
   return (
     <View style={styles.container}>
@@ -187,8 +190,15 @@ export function PrinterSetupScreen({ onDone }: Props) {
 
           <View style={styles.deviceButtons}>
             <TouchableOpacity
-              style={styles.outlineButton}
+              disabled={isDeviceNone}
+              style={[
+                styles.outlineButton,
+                isDeviceNone && { opacity: 0.4 },
+              ]}
               onPress={async () => {
+                if (isDeviceNone) {
+                  return;
+                }
                 try {
                   if (Platform.OS === 'android' && Platform.Version >= 31) {
                     const connectGranted = await PermissionsAndroid.request(
@@ -221,8 +231,16 @@ export function PrinterSetupScreen({ onDone }: Props) {
               <Text style={styles.outlineButtonText}>Refresh</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.primaryButton, { marginLeft: 8 }]}
+              disabled={isDeviceNone}
+              style={[
+                styles.primaryButton,
+                { marginLeft: 8 },
+                isDeviceNone && { opacity: 0.4 },
+              ]}
               onPress={async () => {
+                if (isDeviceNone) {
+                  return;
+                }
                 if (deviceType === 'bluetooth') {
                   if (isConnected && (printerName || selectedDeviceAddress)) {
                     // Disconnect flow
@@ -411,89 +429,89 @@ export function PrinterSetupScreen({ onDone }: Props) {
           style={slideWidth > 0 ? { width: slideWidth } : undefined}
           contentContainerStyle={{ alignItems: 'stretch' }}>
           <LabelPreview
-  index={0}
-  title="Print Test 1"
-  slideWidth={slideWidth}
-  label={{
-    productName: 'AQUA AIR MINERAL BOTOL 1.5L',
-    internalCode: '00217770102',
-    barcode: 'A002177701025',
-    unitLabel: '1 PCS',
-    normalPrice: 5700,
-    discountPrice: 5415,
-  }}
-  onPress={async () => {
-    const label: DiscountLabelData = {
-      productName: 'AQUA AIR MINERAL BOTOL 1.5L',
-      internalCode: '00217770102',
-      barcode: 'A002177701025',
-      unitLabel: '1 PCS',
-      normalPrice: 5700,
-      discountPrice: 5415,
-    };
-    const settings: PrinterSettings = {
-      ...defaultPrinterSettings,
-      labelWidth: is88mm ? 576 : 384,
-    };
-    await printDiscountLabel(label, settings);
-  }}
-/>
-<LabelPreview
-  index={1}
-  title="Print Test 2"
-  slideWidth={slideWidth}
-  label={{
-    productName: 'LONGAN GOLD NS',
-    internalCode: '00529810101',
-    barcode: 'B201019425',
-    unitLabel: '1.942 KG',
-    normalPrice: 97100,
-    discountPrice: 92245,
-  }}
-  onPress={async () => {
-    const label: DiscountLabelData = {
-      productName: 'LONGAN GOLD NS',
-      internalCode: '00529810101',
-      barcode: 'B201019425',
-      unitLabel: '1.942 KG',
-      normalPrice: 97100,
-      discountPrice: 92245,
-    };
-    const settings: PrinterSettings = {
-      ...defaultPrinterSettings,
-      labelWidth: is88mm ? 576 : 384,
-    };
-    await printDiscountLabel(label, settings);
-  }}
-/>
-<LabelPreview
-  index={2}
-  title="Print Test 3"
-  slideWidth={slideWidth}
-  label={{
-    productName: 'ANGGUR HITAM MIDNIGHT BEAUTY NS',
-    internalCode: '99058830101',
-    barcode: 'C1112017501',
-    unitLabel: '1,75 KG',
-    normalPrice: 91875,
-    discountPrice: 90956,
-  }}
-  onPress={async () => {
-    const label: DiscountLabelData = {
-      productName: 'ANGGUR HITAM MIDNIGHT BEAUTY NS',
-      internalCode: '99058830101',
-      barcode: 'C1112017501',
-      unitLabel: '1,75 KG',
-      normalPrice: 91875,
-      discountPrice: 90956,
-    };
-    const settings: PrinterSettings = {
-      ...defaultPrinterSettings,
-      labelWidth: is88mm ? 576 : 384,
-    };
-    await printDiscountLabel(label, settings);
-  }}
-/>
+            index={0}
+            title="Print Test 1"
+            slideWidth={slideWidth}
+            label={{
+              productName: 'AQUA AIR MINERAL BOTOL 1.5L',
+              internalCode: '00217770102',
+              barcode: 'A002177701025',
+              unitLabel: '1 PCS',
+              normalPrice: 5700,
+              discountPrice: 5415,
+            }}
+            onPress={async () => {
+              const label: DiscountLabelData = {
+                productName: 'AQUA AIR MINERAL BOTOL 1.5L',
+                internalCode: '00217770102',
+                barcode: 'A002177701025',
+                unitLabel: '1 PCS',
+                normalPrice: 5700,
+                discountPrice: 5415,
+              };
+              const settings: PrinterSettings = {
+                ...defaultPrinterSettings,
+                labelWidth: is88mm ? 576 : 384,
+              };
+              await printDiscountLabel(label, settings);
+            }}
+          />
+          <LabelPreview
+            index={1}
+            title="Print Test 2"
+            slideWidth={slideWidth}
+            label={{
+              productName: 'LONGAN GOLD NS',
+              internalCode: '00529810101',
+              barcode: 'B201019425',
+              unitLabel: '1.942 KG',
+              normalPrice: 97100,
+              discountPrice: 92245,
+            }}
+            onPress={async () => {
+              const label: DiscountLabelData = {
+                productName: 'LONGAN GOLD NS',
+                internalCode: '00529810101',
+                barcode: 'B201019425',
+                unitLabel: '1.942 KG',
+                normalPrice: 97100,
+                discountPrice: 92245,
+              };
+              const settings: PrinterSettings = {
+                ...defaultPrinterSettings,
+                labelWidth: is88mm ? 576 : 384,
+              };
+              await printDiscountLabel(label, settings);
+            }}
+          />
+          <LabelPreview
+            index={2}
+            title="Print Test 3"
+            slideWidth={slideWidth}
+            label={{
+              productName: 'ANGGUR HITAM MIDNIGHT BEAUTY NS',
+              internalCode: '99058830101',
+              barcode: 'C1112017501',
+              unitLabel: '1,75 KG',
+              normalPrice: 91875,
+              discountPrice: 90956,
+            }}
+            onPress={async () => {
+              const label: DiscountLabelData = {
+                productName: 'ANGGUR HITAM MIDNIGHT BEAUTY NS',
+                internalCode: '99058830101',
+                barcode: 'C1112017501',
+                unitLabel: '1,75 KG',
+                normalPrice: 91875,
+                discountPrice: 90956,
+              };
+              const settings: PrinterSettings = {
+                ...defaultPrinterSettings,
+                labelWidth: is88mm ? 576 : 384,
+              };
+              await printDiscountLabel(label, settings);
+            }}
+          />
         </ScrollView>
         <View style={styles.dotsRow}>
           {[0, 1, 2].map(i => (
